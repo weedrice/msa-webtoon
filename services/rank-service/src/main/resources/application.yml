@@ -1,0 +1,29 @@
+server:
+  port: 8102
+
+spring:
+  application:
+    name: rank-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    streams:
+      application-id: rank-service
+      state-dir: ${TMPDIR:/tmp}/kstreams
+    properties:
+      spring.json.trusted.packages: "*"
+
+redisson:
+  file: classpath:redisson.yaml
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+springdoc:
+  swagger-ui:
+    enabled: true
+
+rank:
+  windows: "10s,60s,300s"
