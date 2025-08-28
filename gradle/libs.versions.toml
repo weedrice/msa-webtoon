@@ -1,0 +1,17 @@
+[versions]
+java = "21"
+spring-boot = "3.4.4"
+dep-mgmt = "1.1.6"
+
+[libraries]
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security" }
+spring-kafka = { module = "org.springframework.kafka:spring-kafka" }
+kafka-streams = { module = "org.apache.kafka:kafka-streams" }
+redisson = { module = "org.redisson:redisson-spring-boot-starter", version = "3.37.0" }
+opensearch = { module = "org.opensearch.client:opensearch-rest-high-level-client", version = "2.15.0" }
+postgres = { module = "org.postgresql:postgresql", version = "42.7.4" }
+micrometer-prom = { module = "io.micrometer:micrometer-registry-prometheus" }
+springdoc = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version = "2.6.0" }

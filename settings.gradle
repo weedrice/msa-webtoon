@@ -1,0 +1,12 @@
+rootProject.name = 'msa-webtoon'
+
+include(
+        'libs:common-domain',
+        'libs:common-observability',
+        'services:api-gateway',
+        'services:auth-service',
+        'services:catalog-service',
+        'services:event-ingest',
+        'services:rank-service',
+        'services:search-service'
+)

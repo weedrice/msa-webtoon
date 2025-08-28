@@ -1,0 +1,43 @@
+plugins {
+    id 'java'
+    id 'io.spring.dependency-management' version '1.1.6'
+    id 'org.springframework.boot' version '3.4.4' apply false
+}
+
+allprojects {
+    group = 'com.yoordi'; version = '0.1.0'
+    repositories { mavenCentral() }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'io.spring.dependency-management'
+
+    java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+
+    // 🔽 Spring Boot BOM 적용: 하위 모듈에서 버전 없이 선언 가능
+    dependencyManagement {
+        imports { mavenBom "org.springframework.boot:spring-boot-dependencies:3.4.4" }
+    }
+
+    dependencies { testImplementation 'org.springframework.boot:spring-boot-starter-test' }
+    test { useJUnitPlatform() }
+}
+
+configure([
+        project(':services:api-gateway'),
+        project(':services:auth-service'),
+        project(':services:catalog-service'),
+        project(':services:event-ingest'),
+        project(':services:rank-service'),
+        project(':services:search-service')
+]) {
+    apply plugin: 'org.springframework.boot'
+    dependencies {
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springframework.boot:spring-boot-starter-actuator'
+        implementation 'org.springframework.boot:spring-boot-starter-validation'
+        implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+        implementation 'io.micrometer:micrometer-registry-prometheus'
+    }
+}
