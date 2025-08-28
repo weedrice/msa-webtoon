@@ -1,4 +1,4 @@
-package com.example.gw;
+package com.yoordi.gw;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
