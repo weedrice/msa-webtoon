@@ -1,0 +1,31 @@
+server:
+  port: 8101
+
+spring:
+  application:
+    name: event-ingest
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      acks: all
+      enable-idempotence: true
+      linger-ms: 5
+      batch-size: 32768
+      compression-type: lz4
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    properties:
+      spring.json.add.type.headers: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+springdoc:
+  swagger-ui:
+    enabled: true
+
+topic:
+  pageView: events.page_view.v1

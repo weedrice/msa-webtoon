@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel target="17" />
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="msa-webtoon.services.api-gateway" options="-parameters" />
+      <module name="msa-webtoon.services.api-gateway.main" options="-parameters" />
+      <module name="msa-webtoon.services.api-gateway.test" options="-parameters" />
+      <module name="msa-webtoon.services.auth-service" options="-parameters" />
+      <module name="msa-webtoon.services.auth-service.main" options="-parameters" />
+      <module name="msa-webtoon.services.auth-service.test" options="-parameters" />
+      <module name="msa-webtoon.services.catalog-service" options="-parameters" />
+      <module name="msa-webtoon.services.catalog-service.main" options="-parameters" />
+      <module name="msa-webtoon.services.catalog-service.test" options="-parameters" />
+      <module name="msa-webtoon.services.event-ingest" options="-parameters" />
+      <module name="msa-webtoon.services.event-ingest.main" options="-parameters" />
+      <module name="msa-webtoon.services.event-ingest.test" options="-parameters" />
+      <module name="msa-webtoon.services.rank-service" options="-parameters" />
+      <module name="msa-webtoon.services.rank-service.main" options="-parameters" />
+      <module name="msa-webtoon.services.rank-service.test" options="-parameters" />
+      <module name="msa-webtoon.services.search-service" options="-parameters" />
+      <module name="msa-webtoon.services.search-service.main" options="-parameters" />
+      <module name="msa-webtoon.services.search-service.test" options="-parameters" />
+    </option>
+  </component>
+</project>
