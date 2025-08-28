@@ -17,7 +17,10 @@ subprojects {
 
     // 🔽 Spring Boot BOM 적용: 하위 모듈에서 버전 없이 선언 가능
     dependencyManagement {
-        imports { mavenBom "org.springframework.boot:spring-boot-dependencies:3.4.4" }
+        imports { 
+            mavenBom "org.springframework.boot:spring-boot-dependencies:3.4.4"
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:2024.0.2"
+        }
     }
 
     dependencies { testImplementation 'org.springframework.boot:spring-boot-starter-test' }

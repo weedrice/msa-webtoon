@@ -1,3 +1,65 @@
-server.port: 8080
-management.endpoints.web.exposure.include: health,info,prometheus
-springdoc.swagger-ui.enabled: true
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  main:
+    web-application-type: reactive
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
+        - AddResponseHeader=X-Gateway,msa-webtoon
+      routes:
+        - id: ingest
+          uri: http://localhost:8101
+          predicates: 
+            - Path=/ingest/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 200   # 초당 200
+                redis-rate-limiter.burstCapacity: 400
+        - id: rank
+          uri: http://localhost:8102
+          predicates: 
+            - Path=/rank/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 300
+                redis-rate-limiter.burstCapacity: 600
+      httpclient:
+        connect-timeout: 3000
+        response-timeout: 5s
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  webflux:
+    base-path: /
+    cors:
+      mappings:
+        "/**":
+          allowed-origins: "*"
+          allowed-methods: "*"
+          allowed-headers: "*"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+
+springdoc:
+  swagger-ui:
+    enabled: true
+
