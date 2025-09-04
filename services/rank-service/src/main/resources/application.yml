@@ -12,6 +12,12 @@ spring:
     properties:
       spring.json.trusted.packages: "*"
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret: ${JWT_SECRET:change-me-very-long-secret-32bytes+}
+
 redisson:
   file: classpath:redisson.yaml
 

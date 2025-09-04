@@ -17,6 +17,12 @@ spring:
     properties:
       spring.json.add.type.headers: false
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret: ${JWT_SECRET:change-me-very-long-secret-32bytes+}
+
 management:
   endpoints:
     web:
