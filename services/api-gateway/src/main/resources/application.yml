@@ -32,6 +32,26 @@ spring:
                 key-resolver: "#{@ipKeyResolver}"
                 redis-rate-limiter.replenishRate: 300
                 redis-rate-limiter.burstCapacity: 600
+        - id: catalog
+          uri: http://localhost:8103
+          predicates: 
+            - Path=/catalog/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 200
+        - id: search
+          uri: http://localhost:8104
+          predicates: 
+            - Path=/search/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@ipKeyResolver}"
+                redis-rate-limiter.replenishRate: 200
+                redis-rate-limiter.burstCapacity: 400
       httpclient:
         connect-timeout: 3000
         response-timeout: 5s
