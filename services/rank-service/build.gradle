@@ -3,6 +3,11 @@ plugins {
     id 'java'
 }
 
+bootBuildImage {
+    imageName = "msa-webtoon/rank-service"
+    tags = ["msa-webtoon/rank-service:latest"]
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'

@@ -33,6 +33,7 @@ services:
     environment:
       - discovery.type=single-node
       - plugins.security.disabled=true
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=StrongPassword123!@#$%
       - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
 
   dashboards:
@@ -58,3 +59,38 @@ services:
     volumes:
       - ./grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
     depends_on: [prometheus]
+
+  # MSA Services
+  api-gateway:
+    image: msa-webtoon/api-gateway:latest
+    ports: ["8080:8080"]
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=change-me-very-long-secret-32bytes+
+    depends_on: [redis]
+    
+  event-ingest:
+    image: msa-webtoon/event-ingest:latest
+    ports: ["8101:8101"]
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - JWT_SECRET=change-me-very-long-secret-32bytes+
+    depends_on: [kafka]
+    
+  rank-service:
+    image: msa-webtoon/rank-service:latest
+    ports: ["8102:8102"]
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=change-me-very-long-secret-32bytes+
+    depends_on: [kafka, redis]
+    
+  search-service:
+    image: msa-webtoon/search-service:latest
+    ports: ["8104:8104"]
+    environment:
+      - OPENSEARCH_URL=http://opensearch:9200
+      - KAFKA_BOOTSTRAP=kafka:9092
+    depends_on: [opensearch, kafka]

@@ -1,0 +1,78 @@
+services:
+  # === infra (이미 가지고 있는 것 그대로 사용) ===
+  kafka:
+    image: bitnami/kafka:3.7.0
+    ports: ["9092:9092"]
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@localhost:9093
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+  redis:
+    image: redis:7.2-alpine
+    ports: ["6379:6379"]
+  postgres:
+    image: postgres:16-alpine
+    ports: ["5432:5432"]
+    environment: [ POSTGRES_DB=catalog, POSTGRES_USER=postgres, POSTGRES_PASSWORD=postgres ]
+  opensearch:
+    image: opensearchproject/opensearch:2.12.0
+    environment: [ discovery.type=single-node, plugins.security.disabled=true, OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m ]
+    ports: ["9200:9200"]
+
+  # === apps ===
+  event-ingest:
+    image: com.yoordi/event-ingest:0.1.0
+    ports: ["8101:8101"]
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+    depends_on: [kafka]
+    restart: unless-stopped
+
+  rank-service:
+    image: com.yoordi/rank-service:0.1.0
+    ports: ["8102:8102"]
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9092
+      REDIS_URL: redis://redis:6379
+    depends_on: [kafka, redis]
+    restart: unless-stopped
+
+  catalog-service:
+    image: com.yoordi/catalog-service:0.1.0
+    ports: ["8103:8103"]
+    environment:
+      PG_URL: jdbc:postgresql://postgres:5432/catalog
+      PG_USER: postgres
+      PG_PW: postgres
+      KAFKA_BOOTSTRAP: kafka:9092
+    depends_on: [postgres, kafka]
+    restart: unless-stopped
+
+  search-service:
+    image: com.yoordi/search-service:0.1.0
+    ports: ["8104:8104"]
+    environment:
+      OPENSEARCH_URL: http://opensearch:9200
+      KAFKA_BOOTSTRAP: kafka:9092
+    depends_on: [opensearch, kafka]
+    restart: unless-stopped
+
+  auth-service:
+    image: com.yoordi/auth-service:0.1.0
+    ports: ["8105:8105"]
+    environment:
+      JWT_SECRET: change-me-very-long-secret-32bytes+
+    restart: unless-stopped
+
+  api-gateway:
+    image: com.yoordi/api-gateway:0.1.0
+    ports: ["8080:8080"]
+    environment:
+      REDIS_HOST: redis
+      JWT_SECRET: change-me-very-long-secret-32bytes+
+    depends_on: [event-ingest, rank-service, catalog-service, search-service, auth-service, redis]
+    restart: unless-stopped
