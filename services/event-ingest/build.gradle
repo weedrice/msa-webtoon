@@ -4,6 +4,11 @@ plugins {
     id 'com.google.cloud.tools.jib' version '3.4.0'
 }
 
+bootBuildImage {
+    imageName = "msa-webtoon/event-ingest"
+    tags = ["msa-webtoon/event-ingest:latest"]
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
