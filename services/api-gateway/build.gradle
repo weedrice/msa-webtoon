@@ -12,5 +12,8 @@ dependencies {
     // 레이트리밋용 Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
     
+    // OAuth2 Resource Server
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

@@ -1,0 +1,16 @@
+server:
+  port: 8105
+
+spring:
+  application:
+    name: auth-service
+
+jwt:
+  secret: ${JWT_SECRET:change-me-very-long-secret-32bytes+}
+  expires-min: 60
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
