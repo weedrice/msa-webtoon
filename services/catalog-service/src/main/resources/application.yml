@@ -1,0 +1,29 @@
+server:
+  port: 8103
+
+spring:
+  application:
+    name: catalog-service
+  datasource:
+    url: ${PG_URL:jdbc:postgresql://localhost:5432/catalog}
+    username: ${PG_USER:postgres}
+    password: ${PG_PW:postgres}
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+topic:
+  catalogUpsert: catalog.upsert.v1
