@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.yoordi.com/catalog/upsert/v1",
+  "title": "Catalog Upsert Event",
+  "description": "Schema for webtoon catalog upsert events",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "desc",
+    "tags",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^w-[a-zA-Z0-9]+$",
+      "description": "Webtoon content identifier (format: w-{alphanumeric})"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "Webtoon title"
+    },
+    "desc": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Webtoon description"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 50
+      },
+      "uniqueItems": true,
+      "maxItems": 20,
+      "description": "Array of genre/category tags"
+    },
+    "updatedAt": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Last update timestamp in milliseconds since epoch"
+    },
+    "author": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Optional author name"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "published", "completed", "discontinued"],
+      "description": "Optional publication status"
+    },
+    "thumbnailUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "Optional thumbnail image URL"
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5,
+      "description": "Optional average rating (0-5)"
+    },
+    "episodeCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional number of episodes"
+    }
+  },
+  "additionalProperties": false
+}
