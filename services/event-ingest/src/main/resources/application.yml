@@ -1,37 +1,120 @@
 server:
   port: 8101
+  # Performance tuning
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    max-connections: 8192
+    accept-count: 100
+    connection-timeout: 20000
+    max-http-form-post-size: 2MB
 
 spring:
   application:
     name: event-ingest
+
+  # Jackson configuration for performance
+  jackson:
+    serialization:
+      write-dates-as-timestamps: true
+    default-property-inclusion: non_null
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
     producer:
       acks: all
       enable-idempotence: true
-      linger-ms: 5
-      batch-size: 32768
+      # Performance optimizations
+      linger-ms: 5          # Small batching delay
+      batch-size: 65536     # 64KB batches
+      buffer-memory: 67108864  # 64MB buffer
       compression-type: lz4
+      max-in-flight-requests-per-connection: 5
+      request-timeout-ms: 30000
+      delivery-timeout-ms: 120000
+      # Serializers
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      # Additional properties
+      properties:
+        max.block.ms: 5000
+        metadata.max.age.ms: 30000
     properties:
       spring.json.add.type.headers: false
 
+  # Security
   security:
     oauth2:
       resourceserver:
         jwt:
           secret: ${JWT_SECRET:change-me-very-long-secret-32bytes+}
 
+  # Task execution for async processing
+  task:
+    execution:
+      pool:
+        core-size: 4
+        max-size: 16
+        queue-capacity: 100
+        keep-alive: 60s
+      thread-name-prefix: "async-"
+
+# Management & Monitoring
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+    prometheus:
+      cache.time-to-live: 1s
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        events.publish.duration: true
+      slo:
+        http.server.requests: 10ms,50ms,100ms,200ms,500ms,1s,2s
+        events.publish.duration: 1ms,5ms,10ms,50ms,100ms
 
+# OpenAPI Documentation
 springdoc:
   swagger-ui:
     enabled: true
+    path: /swagger-ui.html
+  api-docs:
+    enabled: true
 
+# Logging levels
+logging:
+  level:
+    com.yoordi.ingest: DEBUG
+    org.springframework.kafka: INFO
+    org.apache.kafka: WARN
+    root: INFO
+
+# Application specific
 topic:
   pageView: events.page_view.v1
+
+# Performance tuning for different environments
+---
+spring:
+  profiles: prod
+
+server:
+  tomcat:
+    threads:
+      max: 400
+      min-spare: 50
+
+logging:
+  level:
+    com.yoordi.ingest: INFO
+    root: WARN

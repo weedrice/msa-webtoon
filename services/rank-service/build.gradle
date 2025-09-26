@@ -3,6 +3,11 @@ plugins {
     id 'java'
 }
 
+bootBuildImage {
+    imageName = "msa-webtoon/rank-service"
+    tags = ["msa-webtoon/rank-service:latest"]
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -14,6 +19,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.testcontainers:kafka:1.20.1'
-    testImplementation 'org.testcontainers:redis:1.20.1'
+
+    testImplementation 'org.testcontainers:testcontainers'   // ← generic
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:kafka'
+    testImplementation platform('org.testcontainers:testcontainers-bom:1.19.8') // 안정 버전
 }

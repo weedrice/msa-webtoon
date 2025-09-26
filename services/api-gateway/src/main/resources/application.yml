@@ -61,12 +61,6 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          secret: ${JWT_SECRET:change-me-very-long-secret-32bytes+}
-
   webflux:
     base-path: /
     cors:
@@ -88,4 +82,7 @@ management:
 springdoc:
   swagger-ui:
     enabled: true
+
+jwt:
+  secret: ${JWT_SECRET:change-me-very-long-secret-32bytes+}
 

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.yoordi.com/events/page_view/v1",
+  "title": "Page View Event",
+  "description": "Schema for webtoon page view events",
+  "type": "object",
+  "required": [
+    "eventId",
+    "userId",
+    "contentId",
+    "ts",
+    "props"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for the event"
+    },
+    "userId": {
+      "type": "string",
+      "pattern": "^u-[a-zA-Z0-9]+$",
+      "description": "User identifier (format: u-{alphanumeric})"
+    },
+    "contentId": {
+      "type": "string",
+      "pattern": "^w-[a-zA-Z0-9]+$",
+      "description": "Webtoon content identifier (format: w-{alphanumeric})"
+    },
+    "ts": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Event timestamp in milliseconds since epoch"
+    },
+    "props": {
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["view", "like", "share"],
+          "description": "Type of user action"
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "Optional user session identifier"
+        },
+        "deviceType": {
+          "type": "string",
+          "enum": ["mobile", "desktop", "tablet"],
+          "description": "Optional device type"
+        },
+        "referrer": {
+          "type": "string",
+          "description": "Optional referrer information"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

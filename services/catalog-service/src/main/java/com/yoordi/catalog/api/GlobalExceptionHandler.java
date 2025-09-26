@@ -1,12 +1,14 @@
-package com.yoordi.ingest.api;
+package com.yoordi.catalog.api;
 
-import com.yoordi.ingest.api.dto.ErrorResponse;
+import com.yoordi.catalog.api.dto.ErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.KafkaException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -16,9 +18,9 @@ import java.util.List;
 import java.util.UUID;
 
 @RestControllerAdvice
-public class ErrorHandler {
+public class GlobalExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(ErrorHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(
@@ -39,7 +41,7 @@ public class ErrorHandler {
 
         ErrorResponse errorResponse = ErrorResponse.withValidationErrors(
                 HttpStatus.BAD_REQUEST.value(),
-                "Event validation failed",
+                "Validation failed for request",
                 getPath(request),
                 traceId,
                 fieldErrors
@@ -66,17 +68,35 @@ public class ErrorHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ErrorResponse> handleDataAccessException(
+            DataAccessException ex, WebRequest request) {
+
+        String traceId = getOrGenerateTraceId();
+        log.error("Database error [traceId: {}]: {}", traceId, ex.getMessage(), ex);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "DATABASE_ERROR",
+                "Database operation failed. Please try again later.",
+                getPath(request),
+                traceId
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
     @ExceptionHandler(KafkaException.class)
     public ResponseEntity<ErrorResponse> handleKafkaException(
             KafkaException ex, WebRequest request) {
 
         String traceId = getOrGenerateTraceId();
-        log.error("Kafka publishing error [traceId: {}]: {}", traceId, ex.getMessage(), ex);
+        log.error("Kafka error [traceId: {}]: {}", traceId, ex.getMessage(), ex);
 
         ErrorResponse errorResponse = ErrorResponse.of(
                 HttpStatus.SERVICE_UNAVAILABLE.value(),
-                "EVENT_PUBLISHING_ERROR",
-                "Failed to publish event. Please try again later.",
+                "MESSAGING_ERROR",
+                "Message publishing failed. Please try again later.",
                 getPath(request),
                 traceId
         );
@@ -84,9 +104,9 @@ public class ErrorHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(errorResponse);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGenericException(
-            Exception ex, WebRequest request) {
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorResponse> handleRuntimeException(
+            RuntimeException ex, WebRequest request) {
 
         String traceId = getOrGenerateTraceId();
         log.error("Unexpected error [traceId: {}]: {}", traceId, ex.getMessage(), ex);
@@ -94,7 +114,25 @@ public class ErrorHandler {
         ErrorResponse errorResponse = ErrorResponse.of(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "INTERNAL_ERROR",
-                "An unexpected error occurred while processing the event.",
+                "An unexpected error occurred. Please try again later.",
+                getPath(request),
+                traceId
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGenericException(
+            Exception ex, WebRequest request) {
+
+        String traceId = getOrGenerateTraceId();
+        log.error("Unhandled error [traceId: {}]: {}", traceId, ex.getMessage(), ex);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "UNKNOWN_ERROR",
+                "An unknown error occurred. Please contact support.",
                 getPath(request),
                 traceId
         );
