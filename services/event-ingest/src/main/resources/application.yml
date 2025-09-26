@@ -106,7 +106,9 @@ topic:
 # Performance tuning for different environments
 ---
 spring:
-  profiles: prod
+  config:
+    activate:
+      on-profile: prod
 
 server:
   tomcat:
