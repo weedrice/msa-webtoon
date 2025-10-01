@@ -16,7 +16,7 @@ java {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.kafka:spring-kafka'
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.opensearch.client:opensearch-rest-high-level-client:2.15.0'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
