@@ -76,7 +76,7 @@ services:
     image: msa-webtoon/event-ingest:latest
     ports: ["8101:8101"]
     environment:
-      - KAFKA_BOOTSTRAP=kafka:9092
+      - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:9092
       - JWT_SECRET=change-me-very-long-secret-32bytes+
     depends_on: [kafka]
 
@@ -84,7 +84,7 @@ services:
     image: msa-webtoon/rank-service:latest
     ports: ["8102:8102"]
     environment:
-      - KAFKA_BOOTSTRAP=kafka:9092
+      - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:9092
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=change-me-very-long-secret-32bytes+
     depends_on: [kafka, redis]
@@ -94,5 +94,5 @@ services:
     ports: ["8104:8104"]
     environment:
       - OPENSEARCH_URL=http://opensearch:9200
-      - KAFKA_BOOTSTRAP=kafka:9092
+      - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:9092
     depends_on: [opensearch, kafka]

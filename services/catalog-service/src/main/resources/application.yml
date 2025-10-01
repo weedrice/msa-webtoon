@@ -13,7 +13,7 @@ spring:
       mode: always
       schema-locations: classpath:schema.sql
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       acks: all
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

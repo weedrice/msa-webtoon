@@ -5,7 +5,7 @@ spring:
   application:
     name: rank-service
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    bootstrap-servers: localhost:9092
     streams:
       application-id: rank-service
       state-dir: ${TMPDIR:/tmp}/kstreams
