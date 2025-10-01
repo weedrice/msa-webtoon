@@ -4,10 +4,8 @@ scrape_configs:
   - job_name: "msa-services"
     metrics_path: /actuator/prometheus
     static_configs:
-      targets:
-        - host.docker.internal:8080
-        - host.docker.internal:8101
-        - host.docker.internal:8102
-        - host.docker.internal:8103
-        - host.docker.internal:8104
-        - host.docker.internal:8105
+      - targets:
+          - host.docker.internal:8080
+          - host.docker.internal:8101
+          - host.docker.internal:8102
+          - host.docker.internal:8104
