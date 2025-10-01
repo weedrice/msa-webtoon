@@ -6,6 +6,7 @@ plugins {
 bootBuildImage {
     imageName = "msa-webtoon/rank-service"
     tags = ["msa-webtoon/rank-service:latest"]
+    builder = "paketobuildpacks/builder-jammy-base:latest"
 }
 
 dependencies {
