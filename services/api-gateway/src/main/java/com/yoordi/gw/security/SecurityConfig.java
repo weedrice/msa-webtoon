@@ -13,7 +13,7 @@ public class SecurityConfig {
     SecurityWebFilterChain filter(ServerHttpSecurity http) throws Exception {
         return http.csrf(csrf -> csrf.disable())
             .authorizeExchange(a -> a
-                .pathMatchers("/actuator/**", "/routes-info", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .pathMatchers("/actuator/**", "/routes-info", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
                 .pathMatchers("/ingest/**").hasAuthority("SCOPE_write:ingest")
                 .pathMatchers("/rank/**").hasAuthority("SCOPE_read:rank")
                 .pathMatchers("/catalog/**").hasAuthority("SCOPE_write:catalog")
