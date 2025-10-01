@@ -70,6 +70,10 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - JWT_SECRET=change-me-very-long-secret-32bytes+
+      - SERVICE_EVENT_INGEST_URL=http://event-ingest:8101
+      - SERVICE_RANK_URL=http://rank-service:8102
+      - SERVICE_CATALOG_URL=http://catalog-service:8103
+      - SERVICE_SEARCH_URL=http://search-service:8104
     depends_on: [redis]
 
   event-ingest:
@@ -88,6 +92,17 @@ services:
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=change-me-very-long-secret-32bytes+
     depends_on: [kafka, redis]
+
+  catalog-service:
+    image: msa-webtoon/catalog-service:latest
+    ports: ["8103:8103"]
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/catalog
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - JWT_SECRET=change-me-very-long-secret-32bytes+
+    depends_on: [postgres, kafka]
 
   search-service:
     image: msa-webtoon/search-service:latest
