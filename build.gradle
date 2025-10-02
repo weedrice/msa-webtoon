@@ -24,7 +24,7 @@ subprojects {
     }
 
     // Fix SnakeYAML Android variant issue
-    configurations.all {
+    configurations.configureEach {
         resolutionStrategy {
             force 'org.yaml:snakeyaml:2.2'
         }
