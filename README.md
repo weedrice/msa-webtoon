@@ -103,7 +103,15 @@ repo/
 * `@KafkaListener(catalog.upsert.v1)` → OpenSearch 인덱싱
 * `GET /search?q=키워드&size=10` → 문서 리스트
 
-> 2단계: `event-generator`, `demo-frontend`, `batch-sync` 추가 / 3단계: `event-replayer`, `chaos-injector`, `notification`, Argo CD
+### event-generator (2단계)
+
+* 부하 테스트용 이벤트 자동 생성 서비스
+* 설정 가능한 EPS (Events Per Second)
+* `POST /generator/start` - 이벤트 생성 시작
+* `POST /generator/stop` - 이벤트 생성 중지
+* `GET /generator/status` - 현재 상태 및 통계 조회
+
+> 2단계: `demo-frontend`, `batch-sync` 추가 / 3단계: `event-replayer`, `chaos-injector`, `notification`, Argo CD
 
 ---
 
@@ -189,6 +197,7 @@ docker compose up -d
 ./gradlew :services:rank-service:bootRun
 ./gradlew :services:catalog-service:bootRun
 ./gradlew :services:search-service:bootRun
+./gradlew :services:event-generator:bootRun
 ./gradlew :services:api-gateway:bootRun
 ```
 
@@ -227,6 +236,25 @@ curl "http://localhost:8080/rank/top?window=1m&n=10"
 
 ```bash
 curl "http://localhost:8080/search?q=제목&size=10"
+```
+
+### 이벤트 생성기 시작 (부하 테스트)
+
+```bash
+# 이벤트 생성 시작 (기본 100 EPS)
+curl -X POST http://localhost:8080/generator/start
+
+# 상태 확인
+curl http://localhost:8080/generator/status
+
+# 이벤트 생성 중지
+curl -X POST http://localhost:8080/generator/stop
+```
+
+**환경변수로 EPS 조정:**
+```bash
+# 500 EPS로 시작
+GENERATOR_EPS=500 ./gradlew :services:event-generator:bootRun
 ```
 
 ---

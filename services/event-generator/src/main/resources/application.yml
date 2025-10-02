@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: event-generator
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9094}
+
+server:
+  port: ${PORT:8083}
+
+# Topic configuration
+topic:
+  pageView: ${TOPIC_PAGE_VIEW:events.page_view.v1}
+
+# Generator configuration
+generator:
+  events-per-second: ${GENERATOR_EPS:100}
+  user-pool-size: ${GENERATOR_USER_POOL:1000}
+  content-pool-size: ${GENERATOR_CONTENT_POOL:500}
+  actions:
+    - view
+    - like
+  view-probability: 0.9  # 90% view, 10% like
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.yoordi.generator: DEBUG
+    org.apache.kafka: DEBUG
+    org.springframework.kafka: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Swagger/OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html

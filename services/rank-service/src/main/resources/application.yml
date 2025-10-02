@@ -9,6 +9,11 @@ spring:
     streams:
       application-id: rank-service
       state-dir: ${TMPDIR:/tmp}/kstreams
+      properties:
+        spring.json.trusted.packages: "*"
+    consumer:
+      properties:
+        spring.json.trusted.packages: "*"
     properties:
       spring.json.trusted.packages: "*"
 
