@@ -7,6 +7,7 @@ include(
         'services:auth-service',
         'services:catalog-service',
         'services:event-ingest',
+        'services:event-generator',
         'services:rank-service',
         'services:search-service'
 )

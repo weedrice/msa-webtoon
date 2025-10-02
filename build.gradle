@@ -17,9 +17,16 @@ subprojects {
 
     // 🔽 Spring Boot BOM 적용: 하위 모듈에서 버전 없이 선언 가능
     dependencyManagement {
-        imports { 
+        imports {
             mavenBom "org.springframework.boot:spring-boot-dependencies:3.4.4"
             mavenBom "org.springframework.cloud:spring-cloud-dependencies:2024.0.2"
+        }
+    }
+
+    // Fix SnakeYAML Android variant issue
+    configurations.configureEach {
+        resolutionStrategy {
+            force 'org.yaml:snakeyaml:2.2'
         }
     }
 
@@ -32,6 +39,7 @@ configure([
         project(':services:auth-service'),
         project(':services:catalog-service'),
         project(':services:event-ingest'),
+        project(':services:event-generator'),
         project(':services:rank-service'),
         project(':services:search-service')
 ]) {

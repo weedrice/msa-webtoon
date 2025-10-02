@@ -18,9 +18,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Configuration
 public class TopologyConfig {
@@ -44,8 +45,15 @@ public class TopologyConfig {
     @Bean
     public KStream<String, EventDto> rankStream(StreamsBuilder streamsBuilder) {
         Serde<String> stringSerde = Serdes.String();
+
+        // Configure JsonSerde with trusted packages
+        Map<String, Object> serdeProps = new HashMap<>();
+        serdeProps.put("spring.json.trusted.packages", "*");
+
         JsonSerde<EventDto> eventSerde = new JsonSerde<>(EventDto.class);
-        
+        eventSerde.configure(serdeProps, false);
+        eventSerde.ignoreTypeHeaders();  // Ignore type headers and use class directly
+
         KStream<String, EventDto> events = streamsBuilder
                 .stream("events.page_view.v1", Consumed.with(stringSerde, eventSerde));
 
