@@ -12,6 +12,7 @@ allprojects {
 subprojects {
     apply plugin: 'java'
     apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'jacoco'
 
     java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 
@@ -30,8 +31,33 @@ subprojects {
         }
     }
 
-    dependencies { testImplementation 'org.springframework.boot:spring-boot-starter-test' }
-    test { useJUnitPlatform() }
+    dependencies {
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testImplementation platform('org.testcontainers:testcontainers-bom:1.19.7')
+        testImplementation 'org.testcontainers:testcontainers'
+        testImplementation 'org.testcontainers:junit-jupiter'
+        testImplementation 'org.testcontainers:kafka'
+        testImplementation 'org.testcontainers:postgresql'
+        testImplementation 'org.testcontainers:elasticsearch'
+        testImplementation 'com.redis.testcontainers:testcontainers-redis:1.6.4'
+    }
+    test {
+        useJUnitPlatform()
+        finalizedBy jacocoTestReport
+    }
+
+    jacoco {
+        toolVersion = "0.8.12"
+    }
+
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            xml.required = true
+            html.required = true
+            csv.required = false
+        }
+    }
 }
 
 configure([
