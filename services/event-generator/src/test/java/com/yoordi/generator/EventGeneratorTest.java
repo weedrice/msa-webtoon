@@ -1,4 +1,4 @@
-package com.yoordi.search;
+package com.yoordi.generator;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.elasticsearch.ElasticsearchContainer;
+import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -20,15 +20,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
-class SearchServiceTest {
+class EventGeneratorTest {
 
     @Container
-    static ElasticsearchContainer opensearch = new ElasticsearchContainer(
-            DockerImageName.parse("opensearchproject/opensearch:2.11.0")
-                    .asCompatibleSubstituteFor("docker.elastic.co/elasticsearch/elasticsearch")
-    ).withEnv("OPENSEARCH_JAVA_OPTS", "-Xms512m -Xmx512m")
-     .withEnv("discovery.type", "single-node")
-     .withEnv("plugins.security.disabled", "true");
+    static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.1"));
 
     @LocalServerPort
     private int port;
@@ -38,7 +33,7 @@ class SearchServiceTest {
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("opensearch.url", () -> "http://" + opensearch.getHttpHostAddress());
+        registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
     }
 
     @Test
@@ -53,10 +48,11 @@ class SearchServiceTest {
     }
 
     @Test
-    void testSearch() {
-        ResponseEntity<java.util.List> response = restTemplate.getForEntity(
-                "http://localhost:" + port + "/search?q=test&size=10",
-                java.util.List.class
+    void testStartGeneration() {
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "http://localhost:" + port + "/generator/start?rps=1",
+                null,
+                String.class
         );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -64,12 +60,32 @@ class SearchServiceTest {
     }
 
     @Test
-    void testSearchWithoutQuery() {
-        ResponseEntity<String> response = restTemplate.getForEntity(
-                "http://localhost:" + port + "/search",
+    void testStopGeneration() {
+        // Start first
+        restTemplate.postForEntity(
+                "http://localhost:" + port + "/generator/start?rps=1",
+                null,
                 String.class
         );
 
-        assertTrue(response.getStatusCode().is4xxClientError());
+        // Then stop
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "http://localhost:" + port + "/generator/stop",
+                null,
+                String.class
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    @Test
+    void testStatus() {
+        ResponseEntity<Map> response = restTemplate.getForEntity(
+                "http://localhost:" + port + "/generator/status",
+                Map.class
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
     }
 }

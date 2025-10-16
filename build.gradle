@@ -14,7 +14,7 @@ subprojects {
     apply plugin: 'io.spring.dependency-management'
     apply plugin: 'jacoco'
 
-    java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+    java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }
 
     // 🔽 Spring Boot BOM 적용: 하위 모듈에서 버전 없이 선언 가능
     dependencyManagement {
@@ -33,7 +33,7 @@ subprojects {
 
     dependencies {
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
-        testImplementation platform('org.testcontainers:testcontainers-bom:1.19.7')
+        testImplementation platform('org.testcontainers:testcontainers-bom:1.20.6')
         testImplementation 'org.testcontainers:testcontainers'
         testImplementation 'org.testcontainers:junit-jupiter'
         testImplementation 'org.testcontainers:kafka'
