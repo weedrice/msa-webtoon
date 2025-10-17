@@ -41,6 +41,7 @@ subprojects {
         testImplementation 'org.testcontainers:elasticsearch'
         testImplementation 'com.redis.testcontainers:testcontainers-redis:1.6.4'
     }
+
     test {
         useJUnitPlatform()
         finalizedBy jacocoTestReport
