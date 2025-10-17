@@ -119,4 +119,68 @@ class ApiGatewayTest {
         // Invalid route returns 401 because it requires authentication
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
+
+    @Test
+    void testInfoController() {
+        ResponseEntity<Map> response = restTemplate.getForEntity(
+                "http://localhost:" + port + "/routes-info",
+                Map.class
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().containsKey("gateway"));
+        assertTrue(response.getBody().containsKey("routes"));
+        assertTrue(response.getBody().containsKey("rateLimit"));
+        assertTrue(response.getBody().containsKey("features"));
+    }
+
+
+    @Test
+    void testAccessLogFilterDoesNotCrash() {
+        // Multiple requests to ensure AccessLogFilter doesn't cause issues
+        for (int i = 0; i < 5; i++) {
+            ResponseEntity<Map> response = restTemplate.getForEntity(
+                    "http://localhost:" + port + "/actuator/health",
+                    Map.class
+            );
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+        }
+    }
+
+    @Test
+    void testGatewayHandles404() {
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "http://localhost:" + port + "/actuator/nonexistent",
+                String.class
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void testConcurrentRequests() throws InterruptedException {
+        int concurrentRequests = 10;
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(concurrentRequests);
+        java.util.concurrent.atomic.AtomicInteger successCount = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        for (int i = 0; i < concurrentRequests; i++) {
+            new Thread(() -> {
+                try {
+                    ResponseEntity<Map> response = restTemplate.getForEntity(
+                            "http://localhost:" + port + "/actuator/health",
+                            Map.class
+                    );
+                    if (response.getStatusCode() == HttpStatus.OK) {
+                        successCount.incrementAndGet();
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            }).start();
+        }
+
+        latch.await();
+        assertEquals(concurrentRequests, successCount.get());
+    }
 }

@@ -83,4 +83,53 @@ class IpKeyResolverTest {
                 .expectNext("1.2.3.4")
                 .verifyComplete();
     }
+
+    @Test
+    void testResolveWithNoRemoteAddress() {
+        MockServerHttpRequest request = MockServerHttpRequest
+                .get("/test")
+                .build();
+
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        Mono<String> result = ipKeyResolver.resolve(exchange);
+
+        // Should return "unknown" when no remote address is available
+        StepVerifier.create(result)
+                .expectNext("unknown")
+                .verifyComplete();
+    }
+
+    @Test
+    void testResolveWithWhitespaceInXForwardedFor() {
+        MockServerHttpRequest request = MockServerHttpRequest
+                .get("/test")
+                .header("X-Forwarded-For", "   192.168.1.100   ,   10.0.0.1   ")
+                .build();
+
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        Mono<String> result = ipKeyResolver.resolve(exchange);
+
+        // Should trim whitespace
+        StepVerifier.create(result)
+                .expectNext("192.168.1.100")
+                .verifyComplete();
+    }
+
+    @Test
+    void testResolveSingleIpInXForwardedFor() {
+        MockServerHttpRequest request = MockServerHttpRequest
+                .get("/test")
+                .header("X-Forwarded-For", "203.0.113.42")
+                .build();
+
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        Mono<String> result = ipKeyResolver.resolve(exchange);
+
+        StepVerifier.create(result)
+                .expectNext("203.0.113.42")
+                .verifyComplete();
+    }
 }
