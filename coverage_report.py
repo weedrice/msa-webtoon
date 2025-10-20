@@ -3,7 +3,9 @@ import xml.etree.ElementTree as ET
 import glob
 import os
 
-os.chdir('C:/Users/Administrator/git/personal/msa-webtoon')
+# Change to repo root based on this script location
+ROOT = os.path.dirname(os.path.abspath(__file__))
+os.chdir(ROOT)
 
 services = glob.glob('services/*/build/reports/jacoco/test/jacocoTestReport.xml')
 print('테스트 커버리지 요약:')

@@ -21,7 +21,16 @@ dependencies {
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.opensearch.client:opensearch-rest-high-level-client:2.15.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:kafka'
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:opensearch'
+    testImplementation 'com.github.tomakehurst:wiremock-jre8:2.35.0'
+    testImplementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+    testRuntimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
+    testRuntimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
 }
 
 tasks.named('test') {

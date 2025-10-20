@@ -17,6 +17,8 @@
   - 서비스 라우팅(`/ingest/**`, `/rank/**`, `/catalog/**`, `/search/**`, `/generator/**`)
   - Redis 기반 레이트리밋, CORS, Request ID/Access Log 필터, OpenAPI 설정
   - JWT 데코더 및 스코프 기반 접근 통제 설정(게이트웨이 레벨)
+  - 회복탄력성: Circuit Breaker + Retry + TimeLimiter 적용, 폴백 컨트롤러 연동, 글로벌 JSON 오류 응답 표준화
+  - CORS 경로별 정책 적용, 레이트리밋(429) 메트릭 및 대시보드 반영
 - Event Ingest 서비스
   - 이벤트 수집 엔드포인트: 단건/배치(POST `/ingest/events`, `/ingest/events/batch`)
   - Kafka `events.page_view.v1` 발행, 입력 유효성 검증
@@ -26,6 +28,8 @@
   - 집계 결과를 Redis ZSET에 반영, 상위 랭킹 조회 API 제공
     - `GET /rank/top`, `GET /rank/top/detail`
   - 처리/오류 메트릭 계측
+  - 랭킹 키 TTL(설정 기반) 적용 및 허용 윈도우 검증을 설정값으로 일원화
+  - 슬라이딩 합계 옵션(aggregate) 추가 및 응답 메타데이터 헤더(X-Window, X-Aggregate, X-Aggregate-ReadFactor, X-Window-Seconds, X-Aggregate-Start-Ms/End-Ms) 포함
 - Catalog 서비스
   - `POST /catalog/upsert`로 카탈로그 upsert → Postgres 저장 + Kafka `catalog.upsert.v1` 발행
   - `GET /catalog/{id}` 단건 조회
@@ -33,12 +37,14 @@
 - Search 서비스
   - `catalog.upsert.v1` 컨슘하여 OpenSearch 색인, 인덱스 부트스트랩(없으면 생성)
   - 키워드 검색 API(`GET /search?q=...&size=...`), 멀티 필드 매칭
-  - 인덱스 설정/매핑 고도화(nori+edge n-gram), 하이라이트 옵션 추가
+  - 인덱스 설정/매핑 고도화(nori+edge n-gram+동의어), 하이라이트 옵션 추가
+  - Alias 전환 스크립트 제공(무중단 인덱스 교체)
+  - (완료) 고급 테스트: 동의어 기반 검색 + 하이라이트 반환 검증
 - Event Generator (부하/데모)
   - 이벤트 생성 시작/중지/상태 API(`POST /generator/start|stop`, `GET /generator/status`)
   - EPS 조절, 생성/발행/에러 메트릭 집계, Kafka 발행
 - 인증(초기)
-  - 간단 토큰 발급 엔드포인트(`/token`) 제공, 게이트웨이와의 JWT 연동 기반 마련
+  - RS256 + JWKS 기반으로 전환, Access/Refresh 토큰 발급 및 갱신(`/token`, `/token/refresh`), 키 롤링 엔드포인트(`/keys/rotate`)
 - 스키마/문서
   - JSON 스키마 샘플(`schemas/json/*`), README에 호출 예시/빠른 시작/로드맵 수록
   - 손상된 아키텍처 문서 대체본(`docs/architecture-fixed.md`) 추가, README 링크/가이드 보강
@@ -48,23 +54,22 @@
 
 - API Gateway/보안
   - 일부 퍼블릭 허용 라우트 정교화, 스코프/정책 점검(보완)
-  - 공통 오류 응답 포맷/폴백 라우팅/회로 차단 등 내결함성 강화
-  - CORS 정책 세분화, 속도 제한 정책 운영 지표/대시보드 정비
 - 인증/권한
-  - Auth 서비스 기능 확장: 로그인/리프레시/키 롤링/권한 스코프 모델링
-  - 운영 키 관리(비밀/회전), 토큰 검증 전략 정교화
+  - Auth 서비스 기능 확장: 로그인/권한 스코프 모델링(남음)
+  - 운영 키 관리 정책/토큰 검증 전략 정교화(남음)
 - Event Ingest
   - 스키마 유효성 강화, 배압/속도 제어, 대용량 배치 최적화
   - 프로듀서 에러 재시도/사후처리(DLQ), 멱등성 옵션/전송 보장 튜닝
 - Rank 서비스
-  - 정확히-한번 처리/리밸런싱 대응, 윈도우 TTL/슬라이딩 창 전략 정교화
+  - 정확히-한번 처리/리밸런싱 대응, 슬라이딩 창(집계 전략) 고도화
   - 랭킹 키 설계/만료/백그라운드 정리, 랭킹 기준 다변화(뷰/좋아요 등)
 - Catalog 서비스
   - 인덱스/쿼리 최적화(Flyway 기반 관리 지속)
   - 중복/경합 처리, 데이터 모델 확장(카테고리/작성자 등)
+  - (완료) DB 경합/트랜잭션 테스트: 잘못된 upsert 시 롤백/미생성 검증, 동시성 케이스 보완
 - Search 서비스
-  - 검색 품질 튜닝(사전/동의어, 하이라이트 품질), 페이지네이션 전략 고도화
-  - 재색인/백필 파이프라인 자동화 및 alias 전환, 인덱스 수명주기 정책(ILM)
+  - 검색 품질 튜닝(사전/동의어 확장, 하이라이트 품질), 페이지네이션 전략 고도화
+  - 재색인/백필 파이프라인 자동화 및 alias 전환(고도화), 인덱스 수명주기 정책(ILM)
   - 색인 오류/지연 모니터링 및 복구 전략
 - Event Generator
   - 시나리오 프리셋(인기 편향, 버스트/피크, 사용자 군집), 다중 토픽 지원
@@ -73,6 +78,7 @@
   - OpenTelemetry 도입 및 분산 트레이싱(게이트웨이→서비스) + Tempo
   - 로그 스택(Loki) 통합, 코릴레이션 ID 전파 일관화
   - 대시보드 보강 및 SLO/알람(Alertmanager) 정립
+  - (완료) Prometheus Alert Rules 초안 추가(5xx, 429, /search p95, CB open)
 - 인프라/배포
   - Helm 차트(서비스별/공통) 작성 및 K8s 배포 파이프라인 구성
   - Argo CD(3단계) GitOps, 시크릿/구성 분리(환경별 values)
@@ -82,6 +88,14 @@
   - 데이터 보존/정리 정책, 개인정보/컴플라이언스 검토
 - 품질/테스트
   - Testcontainers 기반 통합 테스트, E2E 스크립트 연동 안정화
+  - (완료) E2E 스모크 스크립트 추가(ps1/sh): 토큰→카탈로그→이벤트→랭킹/검색 검증
+  - (진행) 코드 기반 통합 테스트 도입(JUnit5 + Testcontainers)
+    - (완료) rank-service: Kafka/Redis/JWKS 모킹으로 윈도우 집계/조회 검증
+    - (완료) event-ingest: Kafka/JWKS 모킹으로 발행 성공 검증
+    - (완료) search-service: OpenSearch/Kafka/JWKS로 색인→검색 플로우 검증(테스트 전용 매핑)
+    - (완료) catalog-service: 보안 적용 하에 RS256 토큰 포함 upsert 성공 검증
+    - (진행) api-gateway: 회복탄력성(CB/Retry/TimeLimiter) 폴백, CORS 사전요청 테스트(429 메트릭은 추후 안정화 후 추가)
+  - (완료) 커버리지 리포트/요약 스크립트 정리(coverage_report.py), README에 사용법 추가
   - 성능/부하 테스트 프로파일, 카나리/연기 테스트
 - 프런트엔드/데모
   - Demo UI(2단계 로드맵), 실시간 랭킹/검색 대시보드 구현
@@ -101,8 +115,6 @@
 
 ### API Gateway
 - Now
-  - 공통 오류 포맷/폴백 라우팅, 회로 차단 기본 정책(M1)
-  - CORS 정책 세분화 및 레이트리밋 지표 노출(M1)
 - Next
   - 경로/스코프 매핑 표준화, 라우트 헬스 체크 강화(M2)
 - Later
@@ -126,7 +138,7 @@
 
 ### Rank Service
 - Now
-  - 윈도우 TTL/키 만료 설계, 조회 API 파라미터 유효성 고도화(M1)
+  - (완료) 1차 튜닝: 윈도우당 읽기 비율 `rank.aggregateReadFactor` 도입(M1)
 - Next
   - 리밸런싱/재시작 내구성, 정확히-한번 처리 전략 보강(M2)
 - Later

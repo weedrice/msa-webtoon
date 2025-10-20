@@ -145,10 +145,31 @@ spring:
     base-path: /
     cors:
       mappings:
-        "/**":
-          allowed-origins: "*"
-          allowed-methods: "*"
-          allowed-headers: "*"
+        "/ingest/**":
+          allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+          allowed-methods: "POST,OPTIONS"
+          allowed-headers: "Authorization,Content-Type"
+          max-age: 3600
+        "/rank/**":
+          allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+          allowed-methods: "GET,OPTIONS"
+          allowed-headers: "Authorization,Content-Type"
+          max-age: 3600
+        "/catalog/**":
+          allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+          allowed-methods: "POST,OPTIONS"
+          allowed-headers: "Authorization,Content-Type"
+          max-age: 3600
+        "/search/**":
+          allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+          allowed-methods: "GET,OPTIONS"
+          allowed-headers: "Authorization,Content-Type"
+          max-age: 3600
+        "/generator/**":
+          allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+          allowed-methods: "GET,POST,OPTIONS"
+          allowed-headers: "Authorization,Content-Type"
+          max-age: 3600
 
 management:
   endpoints:
@@ -163,8 +184,12 @@ springdoc:
   swagger-ui:
     enabled: true
 
-jwt:
-  secret: ${JWT_SECRET:change-me-very-long-secret-32bytes+}
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${AUTH_JWKS_URI:http://localhost:8105/.well-known/jwks.json}
 
 resilience4j:
   circuitbreaker:

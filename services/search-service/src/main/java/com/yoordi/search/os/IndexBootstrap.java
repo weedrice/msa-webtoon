@@ -17,6 +17,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(value = "search.bootstrap.enabled", havingValue = "true", matchIfMissing = true)
 @Component
 public class IndexBootstrap implements CommandLineRunner {
     @Autowired

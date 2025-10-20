@@ -12,3 +12,5 @@ scrape_configs:
           - host.docker.internal:8104   # search-service
           - host.docker.internal:8083   # event-generator
           - host.docker.internal:8105   # auth-service
+rule_files:
+  - /etc/prometheus/alerts.yml

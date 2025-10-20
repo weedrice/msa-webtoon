@@ -19,8 +19,20 @@
     },
     {
       "type": "timeseries",
-      "title": "HTTP 5xx Error Rate",
+      "title": "Rate Limit Rejections (429)",
       "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (route) (rate(gateway_ratelimit_rejected_total[1m]))",
+          "legendFormat": "{{route}}",
+          "datasource": {"type": "prometheus", "uid": "Prometheus"}
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP 5xx Error Rate",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
       "targets": [
         {
           "expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))",
@@ -32,7 +44,7 @@
     {
       "type": "timeseries",
       "title": "Rank Redis Updates (rate)",
-      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
       "targets": [
         {
           "expr": "rate(rank_redis_updates_total[1m])",
@@ -55,4 +67,3 @@
     }
   ]
 }
-

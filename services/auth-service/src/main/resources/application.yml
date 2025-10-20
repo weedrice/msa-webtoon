@@ -6,8 +6,8 @@ spring:
     name: auth-service
 
 jwt:
-  secret: ${JWT_SECRET:change-me-very-long-secret-32bytes+}
   expires-min: 60
+  refresh-expires-min: 1440
 
 management:
   endpoints:

@@ -8,8 +8,9 @@
 - 게이트웨이 및 각 서비스 기동(README 빠른 시작 참고)
 - HS256 비밀키는 모든 서비스에서 동일(`JWT_SECRET`, 기본값 동일)해야 합니다.
 
-## 토큰 발급 (Auth Service)
-- 엔드포인트: `POST http://localhost:8105/token?sub={user}&scope={scopes}`
+## 토큰 발급/갱신 (Auth Service)
+- 발급: `POST http://localhost:8105/token?sub={user}&scope={scopes}`
+- 갱신: `POST http://localhost:8105/token/refresh?sub={user}&refresh_token={refresh}`
 - 예시 스코프
   - `write:ingest`
   - `read:rank`
@@ -27,7 +28,7 @@ curl -s -X POST "http://localhost:8105/token?sub=demo&scope=read:rank"
 
 PowerShell 스크립트 사용(권장): `scripts/issue-token.ps1`
 ```powershell
-# write:ingest 토큰 발급 후 환경변수 TOKEN에 저장
+# write:ingest 토큰 발급 후 환경변수 TOKEN에 저장 (access_token 반환)
 ./scripts/issue-token.ps1 -Scope "write:ingest" -Sub "demo"
 $env:TOKEN  # 액세스 토큰 확인
 ```
@@ -70,4 +71,5 @@ curl "http://localhost:8080/search?q=제목&size=10" \
 ./scripts/call-examples.ps1
 ```
 
-참고: 토큰 만료(`jwt.expires-min`)는 기본 60분입니다. 필요 시 환경변수 `JWT_SECRET`로 비밀키를 통일해 주세요.
+참고: 토큰 만료(`jwt.expires-min`)는 기본 60분입니다. 모든 리소스 서버는 Auth의 JWKS로 공개키 검증을 수행합니다.
+JWKS 엔드포인트: `http://localhost:8105/.well-known/jwks.json`
