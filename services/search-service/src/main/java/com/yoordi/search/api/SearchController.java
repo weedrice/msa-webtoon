@@ -10,6 +10,7 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.sort.SortOrder;
+import org.opensearch.search.fetch.subphase.highlight.HighlightBuilder;
 import org.opensearch.search.suggest.SuggestBuilder;
 import org.opensearch.search.suggest.SuggestBuilders;
 import org.opensearch.search.suggest.completion.CompletionSuggestionBuilder;
@@ -37,7 +38,8 @@ public class SearchController {
             @Parameter(description = "정렬 필드 (title, updatedAt)") @RequestParam(defaultValue = "_score") String sort,
             @Parameter(description = "정렬 방향 (asc, desc)") @RequestParam(defaultValue = "desc") String order,
             @Parameter(description = "결과 개수") @RequestParam(defaultValue = "10") int size,
-            @Parameter(description = "페이지 오프셋") @RequestParam(defaultValue = "0") int from
+            @Parameter(description = "페이지 오프셋") @RequestParam(defaultValue = "0") int from,
+            @Parameter(description = "하이라이트 활성화") @RequestParam(defaultValue = "false") boolean highlight
     ) throws IOException {
         BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
             .must(QueryBuilders.multiMatchQuery(q, "title", "desc", "tags")
@@ -56,6 +58,15 @@ public class SearchController {
             .size(size)
             .from(from);
 
+        if (highlight) {
+            HighlightBuilder hb = new HighlightBuilder()
+                    .preTags("<em>")
+                    .postTags("</em>");
+            hb.field(new HighlightBuilder.Field("title"));
+            hb.field(new HighlightBuilder.Field("desc"));
+            sourceBuilder.highlighter(hb);
+        }
+
         // 정렬 적용
         if (!"_score".equals(sort)) {
             SortOrder sortOrder = "asc".equalsIgnoreCase(order) ? SortOrder.ASC : SortOrder.DESC;
@@ -70,6 +81,16 @@ public class SearchController {
         for (var h : hits) {
             var source = h.getSourceAsMap();
             source.put("_score", h.getScore());
+            if (highlight && h.getHighlightFields() != null && !h.getHighlightFields().isEmpty()) {
+                var hl = new java.util.HashMap<String, Object>();
+                h.getHighlightFields().forEach((k, v) -> {
+                    var frags = v.getFragments();
+                    if (frags != null && frags.length > 0) {
+                        hl.put(k, java.util.Arrays.stream(frags).map(Object::toString).toArray());
+                    }
+                });
+                if (!hl.isEmpty()) source.put("highlight", hl);
+            }
             results.add(source);
         }
 

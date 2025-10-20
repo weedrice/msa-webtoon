@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: search-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret: ${JWT_SECRET:change-me-very-long-secret-32bytes+}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
     consumer:

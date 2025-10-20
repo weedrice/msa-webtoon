@@ -15,6 +15,8 @@
 
 ## 2) 아키텍처 (1단계 핵심 뼈대)
 
+문서 참고: `docs/architecture-fixed.md`
+
 ```
 [Client(cURL/Swagger)]
         ↓
@@ -62,7 +64,7 @@ repo/
   ci/
     Jenkinsfile
   docs/
-    architecture.md
+    architecture-fixed.md
 ```
 
 ---
@@ -186,6 +188,75 @@ create table if not exists catalog (
 cd platform/local
 docker compose up -d
 # kafka, redis, opensearch, postgres, prometheus, grafana 가 떠야 함
+
+### 1.5) Kafka 토픽 생성 (로컬)
+
+아래 스크립트로 필수 토픽을 생성합니다.
+
+Linux/macOS:
+```
+./platform/local/scripts/create-topics.sh
+```
+
+Windows (PowerShell):
+```
+./platform/local/scripts/create-topics.ps1
+```
+생성 토픽
+- `events.page_view.v1`: partitions=24, retention=24h
+- `catalog.upsert.v1`: partitions=6, retention=7d
+
+### 1.6) OpenSearch 한국어(nori) 분석기 + 재색인(선택)
+
+한국어 검색 품질 향상을 위해 nori 분석기를 설치하고, 새 매핑으로 인덱스를 재생성/재색인할 수 있습니다.
+
+1) nori 플러그인 설치 (컨테이너 내부 설치 후 재시작)
+   - 스크립트가 `opensearch`가 포함된 컨테이너 이름을 자동 탐지합니다. 필요 시 컨테이너명을 인자로 넘길 수 있습니다.
+
+Linux/macOS:
+```
+./platform/local/scripts/install-opensearch-nori.sh
+# 또는 명시적 컨테이너명 전달 예시
+# ./platform/local/scripts/install-opensearch-nori.sh <container-name>
+```
+
+Windows (PowerShell):
+```
+./platform/local/scripts/install-opensearch-nori.ps1
+# 또는
+# ./platform/local/scripts/install-opensearch-nori.ps1 -Container <container-name>
+```
+
+2) 새 인덱스 생성 + 재색인 (예: catalog → catalog_v2)
+
+Linux/macOS:
+```
+./platform/local/scripts/opensearch-reindex.sh catalog catalog_v2
+```
+
+Windows (PowerShell):
+```
+./platform/local/scripts/opensearch-reindex.ps1 -Old catalog -New catalog_v2
+```
+
+3) 검색 서비스가 새 인덱스를 사용하도록 설정
+
+Linux/macOS:
+```
+SEARCH_INDEX=catalog_v2 ./gradlew :services:search-service:bootRun
+```
+
+Windows (PowerShell):
+```
+$env:SEARCH_INDEX = 'catalog_v2'
+./gradlew :services:search-service:bootRun
+```
+
+주의: 기존 인덱스를 그대로 유지하려면 서비스 설정만 변경하세요. 완전 교체가 필요하면 기존 `catalog` 인덱스를 삭제 후 새로 생성하는 방법도 있습니다(데이터 유실 주의).
+ 
+Grafana 대시보드: 기본 데이터소스와 대시보드가 자동 프로비저닝됩니다.
+- 접속: http://localhost:3000 (익명 로그인 on)
+- 대시보드: "MSA Overview", "Search & Rank"
 ```
 
 ### 2) 애플리케이션 빌드/실행
@@ -205,6 +276,28 @@ docker compose up -d
 
 * `http://localhost:8080/actuator/health` (gateway)
 * 각 서비스 포트는 `application.yml`에서 조정
+
+### 4) Grafana 대시보드 (로컬)
+
+Grafana는 기본 데이터소스/대시보드를 자동 프로비저닝합니다.
+- 접속: http://localhost:3000 (익명 로그인)
+- 대시보드: "MSA Overview", "Search & Rank"
+
+### [선택] 원터치 로컬 부트스트랩
+
+아래 스크립트는 인프라 기동 → 토픽 생성 → nori 설치까지 수행합니다.
+
+Linux/macOS:
+```
+./platform/local/scripts/bootstrap-local.sh
+```
+
+Windows (PowerShell):
+```
+./platform/local/scripts/bootstrap-local.ps1
+# 재색인을 바로 진행하려면
+./platform/local/scripts/bootstrap-local.ps1 -Reindex -OldIndex catalog -NewIndex catalog_v2
+```
 
 ---
 
@@ -255,6 +348,8 @@ curl -X POST http://localhost:8080/generator/stop
 ```bash
 # 500 EPS로 시작
 GENERATOR_EPS=500 ./gradlew :services:event-generator:bootRun
+
+보안 활성화 안내: 서비스에 스코프 기반 접근 제어가 적용되어 있습니다. 샘플 호출 시 `Authorization: Bearer <token>` 헤더가 필요할 수 있습니다. 토큰 발급과 예제는 `docs/auth-and-scopes.md`를 참고하세요.
 ```
 
 ---

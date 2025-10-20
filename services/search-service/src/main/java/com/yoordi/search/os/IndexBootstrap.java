@@ -4,10 +4,18 @@ import org.opensearch.client.RequestOptions;
 import org.opensearch.client.RestHighLevelClient;
 import org.opensearch.client.indices.CreateIndexRequest;
 import org.opensearch.client.indices.GetIndexRequest;
+import org.opensearch.common.xcontent.XContentType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
 @Component
 public class IndexBootstrap implements CommandLineRunner {
@@ -16,6 +24,13 @@ public class IndexBootstrap implements CommandLineRunner {
 
     @Value("${search.index}")
     String index;
+
+    private String readResource(Resource resource) throws Exception {
+        try (var is = resource.getInputStream();
+             var reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            return reader.lines().collect(Collectors.joining("\n"));
+        }
+    }
 
     @Override
     public void run(String... args) throws Exception {
@@ -27,26 +42,15 @@ public class IndexBootstrap implements CommandLineRunner {
             try {
                 var exists = os.indices().exists(new GetIndexRequest(index), RequestOptions.DEFAULT);
                 if (!exists) {
+                    var settingsRes = new ClassPathResource("os/index-settings.json");
+                    var mappingRes = new ClassPathResource("os/index-mapping.json");
+
+                    var settingsJson = readResource(settingsRes);
+                    var mappingJson = readResource(mappingRes);
+
                     var create = new CreateIndexRequest(index);
-                    create.mapping("""
-                        {
-                          "properties": {
-                            "id": {"type": "keyword"},
-                            "title": {
-                              "type": "text",
-                              "fields": {
-                                "keyword": {"type": "keyword"},
-                                "completion": {"type": "completion"}
-                              }
-                            },
-                            "desc": {"type": "text"},
-                            "tags": {"type": "keyword"},
-                            "updatedAt": {"type": "date"}
-                          }
-                        }
-                        """,
-                        org.opensearch.common.xcontent.XContentType.JSON
-                    );
+                    create.settings(settingsJson, XContentType.JSON);
+                    create.mapping(mappingJson, XContentType.JSON);
                     os.indices().create(create, RequestOptions.DEFAULT);
                 }
                 return; // Success, exit

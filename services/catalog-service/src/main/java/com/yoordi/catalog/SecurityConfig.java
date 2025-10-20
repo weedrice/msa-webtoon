@@ -1,4 +1,4 @@
-package com.yoordi.rank;
+package com.yoordi.catalog;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,8 +14,9 @@ public class SecurityConfig {
         return http.csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(a -> a
                 .requestMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .requestMatchers("/rank/**").hasAuthority("SCOPE_read:rank")
+                .requestMatchers("/catalog/**").hasAuthority("SCOPE_write:catalog")
                 .anyRequest().authenticated())
             .oauth2ResourceServer(o -> o.jwt(j -> {})).build();
     }
 }
+

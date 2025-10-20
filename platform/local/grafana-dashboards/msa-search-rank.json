@@ -1,0 +1,58 @@
+{
+  "title": "Search & Rank",
+  "uid": "msa-search-rank",
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Search Latency p95 (if histogram enabled)",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{uri=~\"/search.*\"}[5m])))",
+          "legendFormat": "p95",
+          "datasource": {"type": "prometheus", "uid": "Prometheus"}
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Rank Top API Latency p95",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{uri=~\"/rank/top.*\"}[5m])))",
+          "legendFormat": "p95",
+          "datasource": {"type": "prometheus", "uid": "Prometheus"}
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "OpenSearch Query Count (rate)",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (instance) (rate(http_server_requests_seconds_count{uri=~\"/search.*\"}[1m]))",
+          "legendFormat": "{{instance}} rps",
+          "datasource": {"type": "prometheus", "uid": "Prometheus"}
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Redis Update Failures (if any custom metric exists)",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "rate(rank_redis_updates_total[1m])",
+          "legendFormat": "updates rps",
+          "datasource": {"type": "prometheus", "uid": "Prometheus"}
+        }
+      ]
+    }
+  ]
+}
+
