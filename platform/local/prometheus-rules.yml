@@ -1,0 +1,40 @@
+groups:
+  - name: msa-webtoon-alerts
+    interval: 30s
+    rules:
+      - alert: GatewayHighErrorRate
+        expr: sum(rate(http_server_requests_seconds_count{status=~"5..",instance=~".*8080.*"}[5m])) / sum(rate(http_server_requests_seconds_count{instance=~".*8080.*"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Gateway 5xx error rate high"
+          description: "5xx ratio > 5% for 5m"
+
+      - alert: RateLimitRejectionsHigh
+        expr: sum(rate(gateway_ratelimit_rejected_total[5m])) > 1
+        for: 1m
+        labels:
+          severity: info
+        annotations:
+          summary: "Gateway rate-limit rejections present"
+          description: "429 rejections observed in the last 5m"
+
+      - alert: SearchLatencyP95High
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{uri=~"/search.*"}[5m]))) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Search p95 latency high"
+          description: "/search p95 latency > 300ms for 5m"
+
+      - alert: CircuitBreakerOpen
+        expr: sum(resilience4j_circuitbreaker_state{state="open"}) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Circuit breaker open"
+          description: "One or more circuit breakers are open"
+

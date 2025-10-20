@@ -1,0 +1,45 @@
+{
+  "analysis": {
+    "filter": {
+      "ko_synonyms": {
+        "type": "synonym_graph",
+        "synonyms": [
+          "웹툰, 만화",
+          "작가, 作者",
+          "로맨스, 연애, 사랑",
+          "액션, 무협",
+          "학원, 스쿨, 학교"
+        ]
+      }
+    },
+    "tokenizer": {
+      "edge_ngram_tokenizer": {
+        "type": "edge_ngram",
+        "min_gram": 2,
+        "max_gram": 20,
+        "token_chars": ["letter", "digit"]
+      },
+      "my_nori": {
+        "type": "nori_tokenizer",
+        "decompound_mode": "mixed"
+      }
+    },
+    "analyzer": {
+      "edge_ngram_analyzer": {
+        "type": "custom",
+        "tokenizer": "edge_ngram_tokenizer",
+        "filter": ["lowercase"]
+      },
+      "korean_nori": {
+        "type": "custom",
+        "tokenizer": "my_nori",
+        "filter": ["lowercase", "nori_readingform"]
+      },
+      "korean_nori_syn": {
+        "type": "custom",
+        "tokenizer": "my_nori",
+        "filter": ["lowercase", "nori_readingform", "ko_synonyms"]
+      }
+    }
+  }
+}

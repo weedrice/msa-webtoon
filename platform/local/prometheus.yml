@@ -5,7 +5,12 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets:
-          - host.docker.internal:8080
-          - host.docker.internal:8101
-          - host.docker.internal:8102
-          - host.docker.internal:8104
+          - host.docker.internal:8080   # gateway
+          - host.docker.internal:8101   # event-ingest
+          - host.docker.internal:8102   # rank-service
+          - host.docker.internal:8103   # catalog-service
+          - host.docker.internal:8104   # search-service
+          - host.docker.internal:8083   # event-generator
+          - host.docker.internal:8105   # auth-service
+rule_files:
+  - /etc/prometheus/alerts.yml

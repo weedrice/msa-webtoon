@@ -1,0 +1,33 @@
+{
+  "properties": {
+    "id": { "type": "keyword" },
+    "title": {
+      "type": "text",
+      "analyzer": "korean_nori",
+      "search_analyzer": "korean_nori_syn",
+      "fields": {
+        "keyword": { "type": "keyword" },
+        "ngram": {
+          "type": "text",
+          "analyzer": "edge_ngram_analyzer",
+          "search_analyzer": "korean_nori_syn"
+        },
+        "completion": { "type": "completion" }
+      }
+    },
+    "desc": {
+      "type": "text",
+      "analyzer": "korean_nori",
+      "search_analyzer": "korean_nori_syn",
+      "fields": {
+        "ngram": {
+          "type": "text",
+          "analyzer": "edge_ngram_analyzer",
+          "search_analyzer": "korean_nori_syn"
+        }
+      }
+    },
+    "tags": { "type": "keyword" },
+    "updatedAt": { "type": "date", "format": "epoch_millis" }
+  }
+}

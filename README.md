@@ -15,6 +15,8 @@
 
 ## 2) 아키텍처 (1단계 핵심 뼈대)
 
+문서 참고: `docs/architecture-fixed.md`
+
 ```
 [Client(cURL/Swagger)]
         ↓
@@ -62,7 +64,7 @@ repo/
   ci/
     Jenkinsfile
   docs/
-    architecture.md
+    architecture-fixed.md
 ```
 
 ---
@@ -186,6 +188,113 @@ create table if not exists catalog (
 cd platform/local
 docker compose up -d
 # kafka, redis, opensearch, postgres, prometheus, grafana 가 떠야 함
+
+### 1.5) Kafka 토픽 생성 (로컬)
+
+아래 스크립트로 필수 토픽을 생성합니다.
+
+Linux/macOS:
+```
+./platform/local/scripts/create-topics.sh
+```
+
+Windows (PowerShell):
+```
+./platform/local/scripts/create-topics.ps1
+```
+생성 토픽
+- `events.page_view.v1`: partitions=24, retention=24h
+- `catalog.upsert.v1`: partitions=6, retention=7d
+
+### 1.6) OpenSearch 한국어(nori) 분석기 + 재색인(선택)
+
+한국어 검색 품질 향상을 위해 nori 분석기를 설치하고, 새 매핑으로 인덱스를 재생성/재색인할 수 있습니다.
+
+1) nori 플러그인 설치 (컨테이너 내부 설치 후 재시작)
+   - 스크립트가 `opensearch`가 포함된 컨테이너 이름을 자동 탐지합니다. 필요 시 컨테이너명을 인자로 넘길 수 있습니다.
+
+Linux/macOS:
+```
+./platform/local/scripts/install-opensearch-nori.sh
+# 또는 명시적 컨테이너명 전달 예시
+# ./platform/local/scripts/install-opensearch-nori.sh <container-name>
+```
+
+Windows (PowerShell):
+```
+./platform/local/scripts/install-opensearch-nori.ps1
+# 또는
+# ./platform/local/scripts/install-opensearch-nori.ps1 -Container <container-name>
+```
+
+2) 새 인덱스 생성 + 재색인 (예: catalog → catalog_v2)
+
+Linux/macOS:
+```
+./platform/local/scripts/opensearch-reindex.sh catalog catalog_v2
+```
+
+Windows (PowerShell):
+```
+./platform/local/scripts/opensearch-reindex.ps1 -Old catalog -New catalog_v2
+```
+
+3) 검색 서비스가 새 인덱스를 사용하도록 설정
+
+Linux/macOS:
+```
+SEARCH_INDEX=catalog_v2 ./gradlew :services:search-service:bootRun
+```
+
+Windows (PowerShell):
+```
+$env:SEARCH_INDEX = 'catalog_v2'
+./gradlew :services:search-service:bootRun
+```
+
+주의: 기존 인덱스를 그대로 유지하려면 서비스 설정만 변경하세요. 완전 교체가 필요하면 기존 `catalog` 인덱스를 삭제 후 새로 생성하는 방법도 있습니다(데이터 유실 주의).
+
+### 1.7) 동의어(synonyms) + Alias 전환(선택)
+
+- 동의어 적용: index-settings.json의 `ko_synonyms`에 기본 예시(웹툰/만화 등)가 포함되어 있습니다. 동의어 변경 시에는 새 인덱스를 생성해 재색인 후 전환하는 것을 권장합니다.
+
+- Alias 전환(무중단 스위치): 새 인덱스(catalog_v2)가 준비되면 `catalog` 별칭을 새 인덱스로 전환합니다.
+
+Linux/macOS:
+```
+./platform/local/scripts/opensearch-alias-switch.sh catalog catalog_v2
+```
+
+Windows (PowerShell):
+```
+./platform/local/scripts/opensearch-alias-switch.ps1 -Alias catalog -NewIndex catalog_v2
+```
+
+- 검색 서비스에서 인덱스 대신 alias 사용 권장: `SEARCH_INDEX=catalog`
+
+### 1.8) Auth/JWKS + Access/Refresh 토큰 (로컬)
+
+- Auth 서비스 기동: `./gradlew :services:auth-service:bootRun`
+- JWKS(공개키) 엔드포인트: `http://localhost:8105/.well-known/jwks.json`
+- Access/Refresh 발급:
+```
+curl -X POST "http://localhost:8105/token?sub=demo&scope=read:rank%20read:search"
+```
+- Access 재발급(Refresh 사용):
+```
+curl -X POST "http://localhost:8105/token/refresh" \
+  -d "sub=demo" -d "refresh_token=<REFRESH_TOKEN>"
+```
+- 키 롤링(데모):
+```
+curl -X POST http://localhost:8105/keys/rotate
+```
+
+리소스 서버는 환경변수 `AUTH_JWKS_URI`로 JWKS를 참조합니다(Compose에 기본 반영됨).
+ 
+Grafana 대시보드: 기본 데이터소스와 대시보드가 자동 프로비저닝됩니다.
+- 접속: http://localhost:3000 (익명 로그인 on)
+- 대시보드: "MSA Overview", "Search & Rank"
 ```
 
 ### 2) 애플리케이션 빌드/실행
@@ -206,9 +315,45 @@ docker compose up -d
 * `http://localhost:8080/actuator/health` (gateway)
 * 각 서비스 포트는 `application.yml`에서 조정
 
+### 4) Grafana 대시보드 (로컬)
+
+Grafana는 기본 데이터소스/대시보드를 자동 프로비저닝합니다.
+- 접속: http://localhost:3000 (익명 로그인)
+- 대시보드: "MSA Overview", "Search & Rank"
+
+### [선택] 원터치 로컬 부트스트랩
+
+아래 스크립트는 인프라 기동 → 토픽 생성 → nori 설치까지 수행합니다.
+
+Linux/macOS:
+```
+./platform/local/scripts/bootstrap-local.sh
+```
+
+Windows (PowerShell):
+```
+./platform/local/scripts/bootstrap-local.ps1
+# 재색인을 바로 진행하려면
+./platform/local/scripts/bootstrap-local.ps1 -Reindex -OldIndex catalog -NewIndex catalog_v2
+```
+
 ---
 
 ## 10) 샘플 호출 (cURL)
+
+### [선택] E2E 스모크 테스트
+
+로컬 환경에서 전체 플로우(토큰→카탈로그 등록→이벤트 적재→랭킹/검색 검증)를 자동 검증합니다.
+
+Linux/macOS:
+```
+./scripts/smoke-e2e.sh
+```
+
+Windows (PowerShell):
+```
+./scripts/smoke-e2e.ps1
+```
 
 ### 카탈로그 등록
 
@@ -255,6 +400,8 @@ curl -X POST http://localhost:8080/generator/stop
 ```bash
 # 500 EPS로 시작
 GENERATOR_EPS=500 ./gradlew :services:event-generator:bootRun
+
+보안 활성화 안내: 서비스에 스코프 기반 접근 제어가 적용되어 있습니다. 샘플 호출 시 `Authorization: Bearer <token>` 헤더가 필요할 수 있습니다. 토큰 발급과 예제는 `docs/auth-and-scopes.md`를 참고하세요.
 ```
 
 ---
@@ -266,6 +413,29 @@ GENERATOR_EPS=500 ./gradlew :services:event-generator:bootRun
 * `OPENSEARCH_URL`: `http://localhost:9200`
 * `SPRING_DATASOURCE_URL` (catalog): `jdbc:postgresql://localhost:5432/catalog`
 * `SPRING_DATASOURCE_USERNAME/PASSWORD`
+* `AUTH_JWKS_URI`: `http://localhost:8105/.well-known/jwks.json` (리소스 서버가 JWKS로 공개키 검증)
+* `SEARCH_INDEX`: `catalog` (검색 서비스에서 인덱스 대신 alias 사용 권장)
+* `CORS_ALLOWED_ORIGINS`: `http://localhost:3000,http://127.0.0.1:3000` (게이트웨이 CORS 허용 오리진)
+* `GENERATOR_EPS`: 이벤트 생성기 EPS 설정(예: `500`)
+
+---
+
+## 16) 테스트/커버리지
+
+- 사전 요구: Docker 데몬(테스트에서 Testcontainers 사용)
+- 전체 테스트 + 커버리지 리포트 생성
+```
+./gradlew clean test jacocoTestReport
+# 또는 JAVA_HOME 변경이 어려울 때(Gradle 런타임만 JDK 17+ 사용)
+./scripts/gradlew-java.sh "" clean test jacocoTestReport   # macOS/Linux
+./scripts/gradlew-java.ps1 -- clean test jacocoTestReport   # Windows
+```
+- 모듈별 커버리지 요약 출력
+```
+python3 coverage_report.py
+```
+- HTML 상세 리포트 경로
+  - 각 모듈: `services/<module>/build/reports/jacoco/test/html/index.html`
 
 ---
 
@@ -273,6 +443,7 @@ GENERATOR_EPS=500 ./gradlew :services:event-generator:bootRun
 
 * `GET /actuator/prometheus` 노출(모든 서비스)
 * Grafana(기본 포트 3000)에서 대시보드: HTTP 지연/오류율, Kafka Lag, Redis ZSET 업데이트 QPS, OpenSearch 쿼리 시간
+* Prometheus Alert Rules 제공(로컬): platform/local/prometheus-rules.yml (5xx 비율, 429, /search p95, 서킷브레이커 open)
 * 2단계: Loki(로그), Tempo(트레이싱), OTel Collector 적용
 
 ---

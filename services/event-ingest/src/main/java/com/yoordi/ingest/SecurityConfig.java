@@ -13,7 +13,8 @@ public class SecurityConfig {
     SecurityFilterChain filter(HttpSecurity http) throws Exception {
         return http.csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(a -> a
-                .requestMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/ingest/**").permitAll()
+                .requestMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/ingest/**").hasAuthority("SCOPE_write:ingest")
                 .anyRequest().authenticated())
             .oauth2ResourceServer(o -> o.jwt(j -> {})).build();
     }
