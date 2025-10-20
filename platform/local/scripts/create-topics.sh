@@ -21,6 +21,12 @@ docker exec kafka bash -lc "\
     --topic catalog.upsert.v1 \
     --partitions 6 \
     --replication-factor 1 \
+    --config retention.ms=604800000 && \
+  ${KAFKA_BIN} --create --if-not-exists \
+    --bootstrap-server ${BROKER} \
+    --topic events.page_view.v1.dlq \
+    --partitions 6 \
+    --replication-factor 1 \
     --config retention.ms=604800000"
 
 echo "Done."

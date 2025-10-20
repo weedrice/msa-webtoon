@@ -38,3 +38,76 @@ groups:
           summary: "Circuit breaker open"
           description: "One or more circuit breakers are open"
 
+      # DLQ Alerts
+      - alert: HighDLQEventRate
+        expr: rate(ingest_events_dlq_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: event-ingest
+        annotations:
+          summary: "High DLQ event rate detected"
+          description: "DLQ event rate > 10/sec for 5 minutes. Events are failing and being routed to DLQ."
+
+      - alert: CriticalDLQEventRate
+        expr: rate(ingest_events_dlq_total[5m]) > 50
+        for: 2m
+        labels:
+          severity: critical
+          service: event-ingest
+        annotations:
+          summary: "Critical DLQ event rate detected"
+          description: "DLQ event rate > 50/sec for 2 minutes. Large number of events failing."
+
+      # Backpressure Alerts
+      - alert: BackpressureActivated
+        expr: rate(ingest_events_error_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: event-ingest
+        annotations:
+          summary: "Event Ingest backpressure activated"
+          description: "Event error rate > 5/sec for 2 minutes. Backpressure mechanism may be rejecting events."
+
+      - alert: BackpressureCritical
+        expr: rate(ingest_events_error_total[5m]) > 20
+        for: 1m
+        labels:
+          severity: critical
+          service: event-ingest
+        annotations:
+          summary: "Critical backpressure condition"
+          description: "Event error rate > 20/sec for 1 minute. System may be overloaded."
+
+      # Search Indexing Alerts
+      - alert: HighSearchIndexingFailureRate
+        expr: rate(search_index_failure[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: search-service
+        annotations:
+          summary: "High search indexing failure rate"
+          description: "Indexing failure rate > 1/sec after all retries. Documents failing to index permanently."
+
+      - alert: SearchIndexingLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(search_index_latency_seconds_bucket[5m]))) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: search-service
+        annotations:
+          summary: "Search indexing latency high"
+          description: "Search indexing p95 latency > 1 second for 5 minutes."
+
+      - alert: SearchIndexingErrorsHigh
+        expr: rate(search_index_errors_total[5m]) > 5
+        for: 3m
+        labels:
+          severity: warning
+          service: search-service
+        annotations:
+          summary: "High search indexing error rate"
+          description: "Search indexing error rate > 5/sec for 3 minutes. Retries are being triggered frequently."
+

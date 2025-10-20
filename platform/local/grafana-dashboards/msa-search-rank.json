@@ -52,6 +52,64 @@
           "datasource": {"type": "prometheus", "uid": "Prometheus"}
         }
       ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Search Indexing Rate",
+      "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "rate(search_indexed_total[1m])",
+          "legendFormat": "indexed/sec",
+          "datasource": {"type": "prometheus", "uid": "Prometheus"}
+        },
+        {
+          "expr": "rate(search_index_errors_total[1m])",
+          "legendFormat": "errors/sec",
+          "datasource": {"type": "prometheus", "uid": "Prometheus"}
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Search Indexing Failures (after retries)",
+      "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "rate(search_index_failure[1m])",
+          "legendFormat": "failures/sec (DLT)",
+          "datasource": {"type": "prometheus", "uid": "Prometheus"}
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Search Indexing Latency",
+      "gridPos": {"x": 0, "y": 24, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(search_index_latency_seconds_bucket[5m])))",
+          "legendFormat": "p95",
+          "datasource": {"type": "prometheus", "uid": "Prometheus"}
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(search_index_latency_seconds_bucket[5m])))",
+          "legendFormat": "p50",
+          "datasource": {"type": "prometheus", "uid": "Prometheus"}
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Total Indexed Documents",
+      "gridPos": {"x": 12, "y": 24, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "search_indexed_total",
+          "legendFormat": "Total",
+          "datasource": {"type": "prometheus", "uid": "Prometheus"}
+        }
+      ]
     }
   ]
 }

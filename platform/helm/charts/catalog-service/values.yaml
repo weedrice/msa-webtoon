@@ -1,0 +1,120 @@
+replicaCount: 2
+
+image:
+  repository: msa-webtoon/catalog-service
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/actuator/prometheus"
+  prometheus.io/port: "8083"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+
+service:
+  type: ClusterIP
+  port: 8083
+
+actuator:
+  enabled: true
+  port: 8083
+
+livenessProbe:
+  enabled: true
+  path: /actuator/health/liveness
+  port: http
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  path: /actuator/health/readiness
+  port: http
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - catalog-service
+        topologyKey: kubernetes.io/hostname
+
+env:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SERVER_PORT: "8083"
+  MANAGEMENT_SERVER_PORT: "8083"
+  # Kafka configuration
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
+  SPRING_KAFKA_PRODUCER_KEY_SERIALIZER: "org.apache.kafka.common.serialization.StringSerializer"
+  SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER: "org.springframework.kafka.support.serializer.JsonSerializer"
+  # PostgreSQL configuration
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres-service:5432/catalog"
+  SPRING_DATASOURCE_USERNAME: "catalog_user"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "none"
+  SPRING_FLYWAY_ENABLED: "true"
+  # Logging
+  LOGGING_LEVEL_ROOT: "INFO"
+  LOGGING_LEVEL_COM_YOORDI: "INFO"
+
+envSecrets: {}
+  # SPRING_DATASOURCE_PASSWORD:
+  #   name: catalog-service-secrets
+  #   key: postgres-password
+  # AUTH_JWKS_URI:
+  #   name: catalog-service-secrets
+  #   key: auth-jwks-uri
+
+config: {}
+
+volumes: []
+volumeMounts: []

@@ -19,12 +19,12 @@ public class CatalogService {
 
     public Optional<Map<String, Object>> findById(String id) {
         return jdbc.query(
-            "select id, title, \"desc\", tags, updated_at from catalog where id = ?",
+            "select id, title, \"desc\", tags, updated_at, version from catalog where id = ?",
             rs -> {
                 if (rs.next()) {
                     Array tagsArray = rs.getArray("tags");
                     List<String> tags = null;
-                    
+
                     if (tagsArray != null) {
                         try {
                             Object[] tagsObjects = (Object[]) tagsArray.getArray();
@@ -39,7 +39,8 @@ public class CatalogService {
                         "title", rs.getString("title"),
                         "desc", rs.getString("desc") != null ? rs.getString("desc") : "",
                         "tags", tags != null ? tags : List.of(),
-                        "updatedAt", rs.getTimestamp("updated_at").toInstant()
+                        "updatedAt", rs.getTimestamp("updated_at").toInstant(),
+                        "version", rs.getLong("version")
                     ));
                 }
                 return Optional.<Map<String, Object>>empty();

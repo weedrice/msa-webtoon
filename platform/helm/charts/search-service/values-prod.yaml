@@ -1,0 +1,70 @@
+# Production environment values for search-service
+
+replicaCount: 3
+
+image:
+  repository: msa-webtoon/search-service
+  pullPolicy: IfNotPresent
+  tag: "v1.0.0"
+
+imagePullSecrets:
+  - name: registry-credentials
+
+resources:
+  limits:
+    cpu: 1500m
+    memory: 1.5Gi
+  requests:
+    cpu: 750m
+    memory: 768Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 12
+  targetCPUUtilizationPercentage: 65
+  targetMemoryUtilizationPercentage: 75
+
+env:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SERVER_PORT: "8084"
+  MANAGEMENT_SERVER_PORT: "8084"
+  # OpenSearch configuration
+  OPENSEARCH_HOST: "opensearch-service"
+  OPENSEARCH_PORT: "9200"
+  OPENSEARCH_SCHEME: "https"
+  SEARCH_INDEX: "catalog"  # Use alias in production
+  # Kafka consumer configuration
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
+  SPRING_KAFKA_CONSUMER_GROUP_ID: "search-service-prod"
+  SPRING_KAFKA_CONSUMER_PROPERTIES_MAX_POLL_RECORDS: "100"
+  SPRING_KAFKA_CONSUMER_PROPERTIES_FETCH_MIN_BYTES: "1048576"  # 1MB
+  # Index bootstrap
+  SEARCH_INDEX_BOOTSTRAP_ENABLED: "false"  # Disable in prod
+  # Logging
+  LOGGING_LEVEL_ROOT: "WARN"
+  LOGGING_LEVEL_COM_YOORDI: "INFO"
+
+envSecrets:
+  AUTH_JWKS_URI:
+    name: search-service-secrets
+    key: auth-jwks-uri
+  OPENSEARCH_USERNAME:
+    name: search-service-secrets
+    key: opensearch-username
+  OPENSEARCH_PASSWORD:
+    name: search-service-secrets
+    key: opensearch-password
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - search-service
+        topologyKey: kubernetes.io/hostname

@@ -1,0 +1,87 @@
+# Production environment values for api-gateway
+# High availability and performance optimized
+
+replicaCount: 3  # Start with 3 replicas for HA
+
+image:
+  repository: msa-webtoon/api-gateway
+  pullPolicy: IfNotPresent
+  tag: "v1.0.0"  # Use semantic versioning
+
+imagePullSecrets:
+  - name: registry-credentials
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 15
+  targetCPUUtilizationPercentage: 60  # More aggressive scaling
+  targetMemoryUtilizationPercentage: 70
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/actuator/prometheus"
+  prometheus.io/port: "8080"
+
+env:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SERVER_PORT: "8080"
+  MANAGEMENT_SERVER_PORT: "8080"
+  # Redis configuration
+  SPRING_DATA_REDIS_HOST: "redis-service"
+  SPRING_DATA_REDIS_PORT: "6379"
+  # Logging - minimal in production
+  LOGGING_LEVEL_ROOT: "WARN"
+  LOGGING_LEVEL_COM_YOORDI: "INFO"
+  # CORS - strict in production
+  CORS_ALLOWED_ORIGINS: "https://webtoon.example.com,https://www.webtoon.example.com"
+  # Circuit Breaker - production settings
+  RESILIENCE4J_CIRCUITBREAKER_INSTANCES_DEFAULT_FAILURERATE_THRESHOLD: "50"
+  RESILIENCE4J_CIRCUITBREAKER_INSTANCES_DEFAULT_WAIT_DURATION_IN_OPEN_STATE: "10s"
+  RESILIENCE4J_CIRCUITBREAKER_INSTANCES_DEFAULT_PERMITTED_NUMBER_OF_CALLS_IN_HALF_OPEN_STATE: "5"
+  # Rate limiting
+  SPRING_CLOUD_GATEWAY_REDIS_RATELIMITER_REPLENISH_RATE: "100"
+  SPRING_CLOUD_GATEWAY_REDIS_RATELIMITER_BURST_CAPACITY: "200"
+
+envSecrets:
+  AUTH_JWKS_URI:
+    name: api-gateway-secrets
+    key: auth-jwks-uri
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:  # Hard anti-affinity
+    - labelSelector:
+        matchExpressions:
+        - key: app.kubernetes.io/name
+          operator: In
+          values:
+          - api-gateway
+      topologyKey: kubernetes.io/hostname
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "200"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+  hosts:
+    - host: api.webtoon.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: api-gateway-prod-tls
+      hosts:
+        - api.webtoon.example.com

@@ -1,0 +1,114 @@
+replicaCount: 2
+
+image:
+  repository: msa-webtoon/auth-service
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/actuator/prometheus"
+  prometheus.io/port: "8105"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+
+service:
+  type: ClusterIP
+  port: 8105
+
+actuator:
+  enabled: true
+  port: 8105
+
+livenessProbe:
+  enabled: true
+  path: /actuator/health/liveness
+  port: http
+  initialDelaySeconds: 45
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  path: /actuator/health/readiness
+  port: http
+  initialDelaySeconds: 20
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - auth-service
+        topologyKey: kubernetes.io/hostname
+
+env:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SERVER_PORT: "8105"
+  MANAGEMENT_SERVER_PORT: "8105"
+  # JWT Configuration
+  JWT_ACCESS_TOKEN_EXPIRATION_MINUTES: "60"
+  JWT_REFRESH_TOKEN_EXPIRATION_DAYS: "30"
+  # Logging
+  LOGGING_LEVEL_ROOT: "INFO"
+  LOGGING_LEVEL_COM_YOORDI: "INFO"
+
+envSecrets: {}
+  # JWT_PRIVATE_KEY:
+  #   name: auth-service-secrets
+  #   key: jwt-private-key
+  # JWT_PUBLIC_KEY:
+  #   name: auth-service-secrets
+  #   key: jwt-public-key
+
+config: {}
+
+volumes: []
+volumeMounts: []

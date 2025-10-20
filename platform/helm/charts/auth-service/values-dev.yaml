@@ -1,0 +1,30 @@
+# Development environment values for auth-service
+
+replicaCount: 1
+
+image:
+  repository: msa-webtoon/auth-service
+  pullPolicy: Always
+  tag: "dev-latest"
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 384Mi
+  requests:
+    cpu: 150m
+    memory: 192Mi
+
+autoscaling:
+  enabled: false
+
+env:
+  SPRING_PROFILES_ACTIVE: "dev"
+  SERVER_PORT: "8105"
+  MANAGEMENT_SERVER_PORT: "8105"
+  # JWT Configuration - shorter expiration for dev
+  JWT_ACCESS_TOKEN_EXPIRATION_MINUTES: "120"  # 2 hours
+  JWT_REFRESH_TOKEN_EXPIRATION_DAYS: "7"  # 1 week
+  # Logging
+  LOGGING_LEVEL_ROOT: "INFO"
+  LOGGING_LEVEL_COM_YOORDI: "DEBUG"

@@ -1,0 +1,59 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  # Default receiver for all alerts
+  receiver: 'default-receiver'
+  # Group alerts by alertname and service
+  group_by: ['alertname', 'service']
+  # Wait before sending notification about new group
+  group_wait: 10s
+  # Wait before sending notification about new alerts added to group
+  group_interval: 10s
+  # Wait before sending notification about resolved alerts
+  repeat_interval: 12h
+
+  # Routing rules for specific alert types
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 5s
+      repeat_interval: 1h
+
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      repeat_interval: 6h
+
+receivers:
+  - name: 'default-receiver'
+    # Default receiver - logs to console
+    # Configure webhook, email, or Slack here when ready
+
+  - name: 'critical-alerts'
+    # Critical alerts receiver
+    # TODO: Configure Slack webhook or PagerDuty for critical alerts
+    # Example Slack configuration (uncomment and configure):
+    # slack_configs:
+    #   - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+    #     channel: '#msa-webtoon-critical'
+    #     title: 'Critical Alert: {{ .GroupLabels.alertname }}'
+    #     text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+
+  - name: 'warning-alerts'
+    # Warning alerts receiver
+    # TODO: Configure Slack webhook for warning alerts
+    # slack_configs:
+    #   - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+    #     channel: '#msa-webtoon-alerts'
+    #     title: 'Warning: {{ .GroupLabels.alertname }}'
+    #     text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+
+inhibit_rules:
+  # Inhibit warning alerts when critical alert is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']

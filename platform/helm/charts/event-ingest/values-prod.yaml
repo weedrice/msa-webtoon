@@ -1,0 +1,59 @@
+# Production environment values for event-ingest
+# High throughput optimized
+
+replicaCount: 5  # High replica count for throughput
+
+image:
+  repository: msa-webtoon/event-ingest
+  pullPolicy: IfNotPresent
+  tag: "v1.0.0"
+
+imagePullSecrets:
+  - name: registry-credentials
+
+resources:
+  limits:
+    cpu: 1500m
+    memory: 1.5Gi
+  requests:
+    cpu: 750m
+    memory: 768Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 20  # Support high EPS
+  targetCPUUtilizationPercentage: 60
+  targetMemoryUtilizationPercentage: 70
+
+env:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SERVER_PORT: "8081"
+  MANAGEMENT_SERVER_PORT: "8081"
+  # Kafka configuration
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
+  # Backpressure - higher limit for production
+  INGEST_BACKPRESSURE_MAX_CONCURRENT: "2000"
+  # DLQ
+  TOPIC_PAGEVIEW_DLQ: "events.page_view.v1.dlq"
+  # Logging
+  LOGGING_LEVEL_ROOT: "WARN"
+  LOGGING_LEVEL_COM_YOORDI: "INFO"
+
+envSecrets:
+  AUTH_JWKS_URI:
+    name: event-ingest-secrets
+    key: auth-jwks-uri
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - event-ingest
+        topologyKey: kubernetes.io/hostname

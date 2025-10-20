@@ -1,0 +1,62 @@
+# Staging environment values for api-gateway
+# Mirrors production configuration with reduced resources
+
+replicaCount: 2
+
+image:
+  repository: msa-webtoon/api-gateway
+  pullPolicy: IfNotPresent
+  tag: "staging-v1.0.0"  # Use specific version tags
+
+resources:
+  limits:
+    cpu: 800m
+    memory: 768Mi
+  requests:
+    cpu: 400m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+env:
+  SPRING_PROFILES_ACTIVE: "staging"
+  SERVER_PORT: "8080"
+  MANAGEMENT_SERVER_PORT: "8080"
+  # Redis configuration
+  SPRING_DATA_REDIS_HOST: "redis-service"
+  SPRING_DATA_REDIS_PORT: "6379"
+  # Logging
+  LOGGING_LEVEL_ROOT: "INFO"
+  LOGGING_LEVEL_COM_YOORDI: "INFO"
+  # CORS
+  CORS_ALLOWED_ORIGINS: "https://staging.webtoon.example.com"
+  # Circuit Breaker
+  RESILIENCE4J_CIRCUITBREAKER_INSTANCES_DEFAULT_FAILURERATE_THRESHOLD: "50"
+  RESILIENCE4J_CIRCUITBREAKER_INSTANCES_DEFAULT_WAIT_DURATION_IN_OPEN_STATE: "10s"
+
+envSecrets:
+  AUTH_JWKS_URI:
+    name: api-gateway-secrets
+    key: auth-jwks-uri
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: staging-api.webtoon.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: api-gateway-staging-tls
+      hosts:
+        - staging-api.webtoon.example.com

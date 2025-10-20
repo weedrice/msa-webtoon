@@ -15,29 +15,46 @@ public class CatalogRepository {
         this.jdbc = jdbc;
     }
 
+    /**
+     * Upsert catalog entry with optimistic locking support.
+     * Version is incremented on each update to handle concurrent modifications.
+     */
     public void upsert(String id, String title, String desc, List<String> tags) {
         jdbc.update(connection -> {
             var ps = connection.prepareStatement("""
-                insert into catalog(id, title, "desc", tags, updated_at)
-                values (?, ?, ?, ?, now())
-                on conflict (id) do update set 
-                    title = excluded.title, 
-                    "desc" = excluded."desc", 
-                    tags = excluded.tags, 
-                    updated_at = now()
+                insert into catalog(id, title, "desc", tags, updated_at, version)
+                values (?, ?, ?, ?, now(), 0)
+                on conflict (id) do update set
+                    title = excluded.title,
+                    "desc" = excluded."desc",
+                    tags = excluded.tags,
+                    updated_at = now(),
+                    version = catalog.version + 1
                 """);
-            
+
             ps.setString(1, id);
             ps.setString(2, title);
             ps.setString(3, desc);
-            
+
             Array tagsArray = null;
             if (tags != null && !tags.isEmpty()) {
                 tagsArray = connection.createArrayOf("text", tags.toArray());
             }
             ps.setArray(4, tagsArray);
-            
+
             return ps;
         });
+    }
+
+    /**
+     * Get current version for a catalog entry.
+     * Useful for detecting concurrent modifications.
+     */
+    public Long getVersion(String id) {
+        return jdbc.queryForObject(
+            "select version from catalog where id = ?",
+            Long.class,
+            id
+        );
     }
 }

@@ -1,0 +1,41 @@
+# Development environment values for catalog-service
+
+replicaCount: 1
+
+image:
+  repository: msa-webtoon/catalog-service
+  pullPolicy: Always
+  tag: "dev-latest"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+
+env:
+  SPRING_PROFILES_ACTIVE: "dev"
+  SERVER_PORT: "8083"
+  MANAGEMENT_SERVER_PORT: "8083"
+  # Kafka configuration
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "localhost:9092"
+  # PostgreSQL configuration
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://localhost:5432/catalog"
+  SPRING_DATASOURCE_USERNAME: "catalog_user"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "none"
+  SPRING_JPA_SHOW_SQL: "true"  # Show SQL in dev
+  SPRING_FLYWAY_ENABLED: "true"
+  # Logging
+  LOGGING_LEVEL_ROOT: "INFO"
+  LOGGING_LEVEL_COM_YOORDI: "DEBUG"
+  LOGGING_LEVEL_ORG_HIBERNATE_SQL: "DEBUG"
+
+envSecrets:
+  SPRING_DATASOURCE_PASSWORD:
+    name: catalog-service-dev-secrets
+    key: postgres-password

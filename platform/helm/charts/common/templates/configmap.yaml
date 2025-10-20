@@ -1,0 +1,12 @@
+{{- define "common.configmap" -}}
+{{- if .Values.config }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "common.fullname" . }}
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+data:
+  {{- toYaml .Values.config | nindent 2 }}
+{{- end }}
+{{- end }}
