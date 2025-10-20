@@ -84,10 +84,16 @@ repo/
 ### api-gateway
 
 * 라우팅, 레이트리밋(옵션), /actuator 공개
+* **Circuit Breaker + Retry + TimeLimiter** (회복탄력성 패턴 적용)
+* 폴백 컨트롤러 (표준 JSON 503 응답)
+* CORS 정책 관리
 
 ### event-ingest
 
 * `POST /ingest/events` (단건/배열) → Kafka `events.page_view.v1`
+* **DLQ (Dead Letter Queue)** 지원: 실패 이벤트 자동 라우팅 및 재처리
+* **배압(Backpressure) 처리**: Semaphore 기반 동시성 제어
+* 무제한 재시도 (최대 2분 타임아웃) + DLQ 폴백
 
 ### rank-service
 
@@ -99,13 +105,20 @@ repo/
 
 * `POST /catalog/upsert` → Postgres upsert + Kafka `catalog.upsert.v1`
 * `GET /catalog/{id}`
+* **Flyway 마이그레이션**: V2에서 성능 최적화 인덱스 추가
+  - `idx_catalog_title`, `idx_catalog_tags (GIN)`, `idx_catalog_updated_at`
+* **Optimistic Locking**: `version` 컬럼 기반 동시성 제어
+  - UPDATE 시 version 자동 증가로 충돌 감지
 
 ### search-service
 
 * `@KafkaListener(catalog.upsert.v1)` → OpenSearch 인덱싱
 * `GET /search?q=키워드&size=10` → 문서 리스트
+* **@RetryableTopic**: 색인 실패 시 3회 재시도 (exponential backoff)
+* **DLT 핸들러**: 영구 실패 이벤트는 `catalog.upsert.v1.dlt`로 전송 및 로깅
+* **메트릭**: `search_index_failure`, `search_index_latency` 수집
 
-### event-generator (2단계)
+### event-generator (1단계 완료)
 
 * 부하 테스트용 이벤트 자동 생성 서비스
 * 설정 가능한 EPS (Events Per Second)
@@ -113,7 +126,7 @@ repo/
 * `POST /generator/stop` - 이벤트 생성 중지
 * `GET /generator/status` - 현재 상태 및 통계 조회
 
-> 2단계: `demo-frontend`, `batch-sync` 추가 / 3단계: `event-replayer`, `chaos-injector`, `notification`, Argo CD
+> 2단계 계획: `demo-frontend`, `batch-sync` 추가 / 3단계 계획: `event-replayer`, `chaos-injector`, `notification`, Argo CD
 
 ---
 
@@ -147,10 +160,11 @@ repo/
 
 ## 7) 토픽/정책 (초안)
 
-| topic                 | key         | partitions | retention | use       |
-| --------------------- | ----------- | ---------: | --------: | --------- |
-| `events.page_view.v1` | `contentId` |         24 |       24h | 랭킹 집계 입력  |
-| `catalog.upsert.v1`   | `id`        |          6 |        7d | 검색 인덱싱 입력 |
+| topic                      | key         | partitions | retention | use          |
+| -------------------------- | ----------- | ---------: | --------: | ------------ |
+| `events.page_view.v1`      | `contentId` |         24 |       24h | 랭킹 집계 입력     |
+| `events.page_view.v1.dlq`  | `contentId` |          6 |        7d | DLQ 재처리      |
+| `catalog.upsert.v1`        | `id`        |          6 |        7d | 검색 인덱싱 입력    |
 
 프로듀서: idempotence=on, acks=all, min.insync.replicas=2 (운영 시)
 
@@ -202,8 +216,9 @@ Windows (PowerShell):
 ```
 ./platform/local/scripts/create-topics.ps1
 ```
-생성 토픽
+생성 토픽:
 - `events.page_view.v1`: partitions=24, retention=24h
+- `events.page_view.v1.dlq`: partitions=6, retention=7d (DLQ)
 - `catalog.upsert.v1`: partitions=6, retention=7d
 
 ### 1.6) OpenSearch 한국어(nori) 분석기 + 재색인(선택)
@@ -404,6 +419,35 @@ GENERATOR_EPS=500 ./gradlew :services:event-generator:bootRun
 보안 활성화 안내: 서비스에 스코프 기반 접근 제어가 적용되어 있습니다. 샘플 호출 시 `Authorization: Bearer <token>` 헤더가 필요할 수 있습니다. 토큰 발급과 예제는 `docs/auth-and-scopes.md`를 참고하세요.
 ```
 
+### DLQ (Dead Letter Queue) 관리
+
+실패한 이벤트는 자동으로 DLQ 토픽(`events.page_view.v1.dlq`)으로 라우팅됩니다. 재처리는 Event Ingest 서비스의 DLQ API를 통해 수행합니다.
+
+**DLQ 통계 확인:**
+```bash
+curl http://localhost:8081/dlq/statistics
+```
+
+**보류 중인 이벤트 조회:**
+```bash
+curl http://localhost:8081/dlq/events/pending
+```
+
+**이벤트 승인 및 재처리:**
+```bash
+curl -X POST "http://localhost:8081/dlq/events/{eventId}/approve-and-reprocess?partition=0&offset=0"
+```
+
+**모든 승인된 이벤트 일괄 재처리:**
+```bash
+curl -X POST http://localhost:8081/dlq/reprocess/all
+```
+
+**처리 완료 이벤트 정리:**
+```bash
+curl -X DELETE http://localhost:8081/dlq/cleanup
+```
+
 ---
 
 ## 11) 환경변수(예시)
@@ -420,22 +464,154 @@ GENERATOR_EPS=500 ./gradlew :services:event-generator:bootRun
 
 ---
 
-## 16) 테스트/커버리지
+## 16) K8s 배포 (Helm)
 
-- 사전 요구: Docker 데몬(테스트에서 Testcontainers 사용)
-- 전체 테스트 + 커버리지 리포트 생성
+프로젝트는 Kubernetes 배포를 위한 Helm 차트를 제공합니다.
+
+### 차트 구조
+
 ```
+platform/helm/charts/
+  common/              # 공통 라이브러리 차트 (재사용 가능한 템플릿)
+  api-gateway/
+  auth-service/
+  catalog-service/
+  event-ingest/
+  rank-service/
+  search-service/
+```
+
+### 환경별 Values
+
+각 서비스는 환경별 values 파일을 제공합니다:
+- `values-dev.yaml`: 개발 환경 (1 replica, DEBUG 로깅, Always pull)
+- `values-prod.yaml`: 운영 환경 (3-5 replicas, autoscaling, anti-affinity)
+
+### 배포 예시
+
+**개발 환경:**
+```bash
+helm install api-gateway ./platform/helm/charts/api-gateway \
+  --namespace msa-webtoon-dev \
+  --create-namespace \
+  --values ./platform/helm/charts/api-gateway/values-dev.yaml
+```
+
+**운영 환경:**
+```bash
+helm install api-gateway ./platform/helm/charts/api-gateway \
+  --namespace msa-webtoon \
+  --create-namespace \
+  --values ./platform/helm/charts/api-gateway/values-prod.yaml
+```
+
+### Helm 차트 검증
+
+**Lint:**
+```bash
+helm lint ./platform/helm/charts/api-gateway
+```
+
+**Dry-run (템플릿 렌더링 확인):**
+```bash
+helm install api-gateway ./platform/helm/charts/api-gateway \
+  --namespace test --create-namespace \
+  --values ./platform/helm/charts/api-gateway/values-dev.yaml \
+  --dry-run --debug
+```
+
+**전체 서비스 배포:**
+```bash
+# 네임스페이스 생성
+kubectl create namespace msa-webtoon
+
+# 각 서비스 배포
+for chart in api-gateway auth-service catalog-service event-ingest rank-service search-service; do
+  helm install $chart ./platform/helm/charts/$chart \
+    --namespace msa-webtoon \
+    --values ./platform/helm/charts/$chart/values-prod.yaml
+done
+```
+
+**배포 확인:**
+```bash
+kubectl get pods -n msa-webtoon
+kubectl logs -n msa-webtoon -l app.kubernetes.io/name=api-gateway
+```
+
+---
+
+## 17) 테스트/커버리지
+
+### 단위/통합 테스트
+
+**사전 요구**: Docker 데몬 (Testcontainers 사용)
+
+**전체 테스트 + 커버리지 리포트 생성**:
+```bash
 ./gradlew clean test jacocoTestReport
-# 또는 JAVA_HOME 변경이 어려울 때(Gradle 런타임만 JDK 17+ 사용)
+# 또는 JAVA_HOME 변경이 어려울 때 (Gradle 런타임만 JDK 17+ 사용)
 ./scripts/gradlew-java.sh "" clean test jacocoTestReport   # macOS/Linux
 ./scripts/gradlew-java.ps1 -- clean test jacocoTestReport   # Windows
 ```
-- 모듈별 커버리지 요약 출력
-```
+
+**모듈별 커버리지 요약**:
+```bash
 python3 coverage_report.py
 ```
-- HTML 상세 리포트 경로
-  - 각 모듈: `services/<module>/build/reports/jacoco/test/html/index.html`
+
+**HTML 상세 리포트 경로**:
+- 각 모듈: `services/<module>/build/reports/jacoco/test/html/index.html`
+
+**테스트 범위**:
+- **rank-service**: Kafka/Redis/JWKS 모킹으로 윈도우 집계/조회 검증
+- **event-ingest**: Kafka/JWKS 모킹으로 발행 성공 검증
+- **search-service**: OpenSearch/Kafka/JWKS로 색인→검색 플로우 검증
+- **catalog-service**: RS256 토큰 포함 upsert 성공 검증, 동시성/버전 테스트
+- **api-gateway**: 회복탄력성 (CB/Retry/TimeLimiter) 폴백, CORS 사전요청 테스트
+
+### E2E 스모크 테스트
+
+전체 플랫폼 동작을 검증하는 자동화 스크립트입니다.
+
+**사전 요구사항**:
+1. 인프라 서비스 실행: `cd platform/local && docker compose up -d`
+2. 애플리케이션 서비스 실행 (각 터미널):
+   ```bash
+   ./gradlew :services:api-gateway:bootRun
+   ./gradlew :services:auth-service:bootRun
+   ./gradlew :services:event-ingest:bootRun
+   ./gradlew :services:rank-service:bootRun
+   ./gradlew :services:catalog-service:bootRun
+   ./gradlew :services:search-service:bootRun
+   ```
+
+**테스트 실행**:
+```bash
+# Linux/macOS
+./test-e2e.sh
+
+# Windows
+test-e2e.bat
+```
+
+**테스트 시나리오**:
+1. Health Check - 모든 서비스 상태 확인
+2. Catalog Setup - 테스트용 웹툰 메타데이터 등록
+3. Search Indexing - OpenSearch 인덱싱 확인
+4. Event Ingestion - 페이지뷰 이벤트 발송 (15개)
+5. Ranking Computation - Redis 기반 실시간 랭킹 확인
+6. Batch Events - 배치 이벤트 처리 테스트
+7. API Documentation - Swagger UI 접근성 확인
+
+**성공 조건**:
+- ✅ 모든 서비스 health: UP
+- ✅ 카탈로그 등록 성공 (200 OK)
+- ✅ 검색 결과에 등록한 웹툰 포함
+- ✅ 랭킹 TOP 10에 이벤트 발송한 contentId 포함
+- ✅ 배치 이벤트 202 Accepted
+
+**상세 가이드**: 프로젝트 루트의 `E2E_TESTING.md` 참고
 
 ---
 
@@ -443,7 +619,13 @@ python3 coverage_report.py
 
 * `GET /actuator/prometheus` 노출(모든 서비스)
 * Grafana(기본 포트 3000)에서 대시보드: HTTP 지연/오류율, Kafka Lag, Redis ZSET 업데이트 QPS, OpenSearch 쿼리 시간
-* Prometheus Alert Rules 제공(로컬): platform/local/prometheus-rules.yml (5xx 비율, 429, /search p95, 서킷브레이커 open)
+  - **Search & Rank 대시보드**: 검색 색인 메트릭 (실패율, 지연, DLT 유입) 패널 추가
+* **Prometheus Alert Rules** (`platform/local/prometheus-rules.yml`):
+  - 기존: 5xx 비율, 429 레이트리밋, /search p95, 서킷브레이커 open
+  - **신규**: DLQ 이벤트 비율, Backpressure 활성화, 검색 색인 실패율/지연
+* **Alertmanager** 통합 (포트 9093):
+  - Severity 기반 라우팅 (critical/warning)
+  - Slack/이메일 알림 설정 가능 (`platform/local/alertmanager.yml`)
 * 2단계: Loki(로그), Tempo(트레이싱), OTel Collector 적용
 
 ---
@@ -457,9 +639,11 @@ python3 coverage_report.py
 
 ## 14) 로드맵
 
-* **1단계**: event-ingest → rank-service → gateway → catalog → search
-* **2단계**: event-generator, demo-frontend, batch-sync, Loki/Tempo/OTel
-* **3단계**: event-replayer, chaos-injector, notification, Argo CD, Service Mesh
+* **1단계 (완료)**: event-ingest, rank-service, api-gateway, catalog-service, search-service, event-generator, auth-service, DLQ, Circuit Breaker, Helm 차트
+* **2단계 (진행중)**:
+  - ✅ **완료**: Catalog 인덱스/Optimistic Locking, Search Retry/DLT/메트릭, Alertmanager 통합
+  - 🔄 **진행**: demo-frontend, batch-sync, OpenTelemetry, Loki, Tempo
+* **3단계 (계획)**: event-replayer, chaos-injector, notification, Argo CD, Service Mesh
 
 ---
 

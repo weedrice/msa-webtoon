@@ -8,11 +8,12 @@
   - Gradle 멀티모듈 구성, 공통 라이브러리/버전 카탈로그 적용
   - 로컬 실행/빌드 스크립트 및 기본 CI 스텁(`ci/Jenkinsfile`)
 - 로컬 인프라
-  - Docker Compose로 Kafka, Redis, Postgres, OpenSearch, Prometheus, Grafana 기동 구성(`platform/local`)
-  - 기본 Grafana 데이터소스/Prometheus 스크랩 설정
+  - Docker Compose로 Kafka, Redis, Postgres, OpenSearch, Prometheus, Grafana, Alertmanager 기동 구성(`platform/local`)
+  - 기본 Grafana 데이터소스/Prometheus 스크랩 설정, Alertmanager 통합 (severity 라우팅)
   - Kafka 토픽 생성 스크립트, OpenSearch nori 설치 스크립트(자동 탐지), 재색인 스크립트 추가
   - 원터치 부트스트랩 스크립트 추가(Compose up → 토픽 생성 → nori 설치)
-  - Grafana 대시보드 자동 프로비저닝(“MSA Overview”, “Search & Rank”)
+  - Grafana 대시보드 자동 프로비저닝("MSA Overview", "Search & Rank" - 색인 메트릭 패널 포함)
+  - Prometheus Alert Rules: 5xx, 429, /search p95, CB open, DLQ, Backpressure, Search 색인 실패/지연
 - API Gateway (Spring Cloud Gateway)
   - 서비스 라우팅(`/ingest/**`, `/rank/**`, `/catalog/**`, `/search/**`, `/generator/**`)
   - Redis 기반 레이트리밋, CORS, Request ID/Access Log 필터, OpenAPI 설정
@@ -23,6 +24,9 @@
   - 이벤트 수집 엔드포인트: 단건/배치(POST `/ingest/events`, `/ingest/events/batch`)
   - Kafka `events.page_view.v1` 발행, 입력 유효성 검증
   - Actuator/Prometheus 노출
+  - DLQ(Dead Letter Queue) 구현 및 재처리 로직 완료(DlqConsumerService, DlqReprocessService, DlqController)
+  - 배압(Backpressure) 처리: Semaphore 기반 동시성 제어 완료
+  - Kafka 프로듀서 재시도 강화: 무제한 재시도(최대 2분 타임아웃) + DLQ 폴백
 - Rank 서비스
   - Kafka Streams 윈도우 집계(초 단위 설정 값, 예: 10s/60s/300s)
   - 집계 결과를 Redis ZSET에 반영, 상위 랭킹 조회 API 제공
@@ -33,12 +37,18 @@
 - Catalog 서비스
   - `POST /catalog/upsert`로 카탈로그 upsert → Postgres 저장 + Kafka `catalog.upsert.v1` 발행
   - `GET /catalog/{id}` 단건 조회
-  - Flyway 도입 및 초기 마이그레이션(V1) 적용
+  - Flyway 마이그레이션: V1 (초기 스키마), V2 (4개 인덱스 + version 컬럼 추가)
+  - Optimistic Locking: version 기반 동시성 제어, UPDATE 시 자동 증가
+  - 통합 테스트: 버전 증가 검증, 동시 upsert 테스트
 - Search 서비스
   - `catalog.upsert.v1` 컨슘하여 OpenSearch 색인, 인덱스 부트스트랩(없으면 생성)
   - 키워드 검색 API(`GET /search?q=...&size=...`), 멀티 필드 매칭
   - 인덱스 설정/매핑 고도화(nori+edge n-gram+동의어), 하이라이트 옵션 추가
   - Alias 전환 스크립트 제공(무중단 인덱스 교체)
+  - @RetryableTopic 적용: 3회 재시도 + exponential backoff, DLT 전송
+  - 메트릭 추가: search_index_failure, search_index_latency
+  - DLT 핸들러: 영구 실패 이벤트 로깅 및 메트릭 기록
+  - Grafana 대시보드 패널 추가: 색인 실패율, 지연, DLT 유입
   - (완료) 고급 테스트: 동의어 기반 검색 + 하이라이트 반환 검증
 - Event Generator (부하/데모)
   - 이벤트 생성 시작/중지/상태 API(`POST /generator/start|stop`, `GET /generator/status`)
@@ -58,30 +68,42 @@
   - Auth 서비스 기능 확장: 로그인/권한 스코프 모델링(남음)
   - 운영 키 관리 정책/토큰 검증 전략 정교화(남음)
 - Event Ingest
-  - 스키마 유효성 강화, 배압/속도 제어, 대용량 배치 최적화
-  - 프로듀서 에러 재시도/사후처리(DLQ), 멱등성 옵션/전송 보장 튜닝
+  - (완료) DLQ 구현 및 재처리 로직: 10개 API 엔드포인트(조회/승인/재처리/통계/정리)
+  - (완료) 배압/속도 제어: Semaphore 기반(최대 1000 동시 처리)
+  - (완료) 프로듀서 재시도 강화: 무제한 재시도 + DLQ 폴백
+  - 스키마 유효성 강화, 대용량 배치 최적화
+  - 멱등성 옵션/전송 보장 튜닝
 - Rank 서비스
   - 정확히-한번 처리/리밸런싱 대응, 슬라이딩 창(집계 전략) 고도화
   - 랭킹 키 설계/만료/백그라운드 정리, 랭킹 기준 다변화(뷰/좋아요 등)
 - Catalog 서비스
-  - 인덱스/쿼리 최적화(Flyway 기반 관리 지속)
-  - 중복/경합 처리, 데이터 모델 확장(카테고리/작성자 등)
-  - (완료) DB 경합/트랜잭션 테스트: 잘못된 upsert 시 롤백/미생성 검증, 동시성 케이스 보완
+  - ✅ (완료) 인덱스 최적화: Flyway V2 마이그레이션으로 4개 인덱스 추가 (title, tags GIN, updated_at, version)
+  - ✅ (완료) Optimistic Locking: version 컬럼 기반 동시성 제어 구현
+  - ✅ (완료) DB 경합/트랜잭션 테스트: 잘못된 upsert 시 롤백/미생성 검증, 동시성 케이스 보완, 버전 증가 검증 테스트 추가
+  - 데이터 모델 확장(카테고리/작성자 등), 트랜잭션 경합 처리 고도화
 - Search 서비스
+  - ✅ (완료) @RetryableTopic: 3회 재시도 + exponential backoff, DLT 전송 (catalog.upsert.v1.dlt)
+  - ✅ (완료) 메트릭 추가: search_index_failure (DLT), search_index_latency (Timer)
+  - ✅ (완료) DLT 핸들러: 영구 실패 이벤트 로깅 및 메트릭 기록
+  - ✅ (완료) Grafana 대시보드 "Search & Rank": 색인 메트릭 패널 추가 (실패율, 지연, DLT 유입)
   - 검색 품질 튜닝(사전/동의어 확장, 하이라이트 품질), 페이지네이션 전략 고도화
   - 재색인/백필 파이프라인 자동화 및 alias 전환(고도화), 인덱스 수명주기 정책(ILM)
-  - 색인 오류/지연 모니터링 및 복구 전략
 - Event Generator
   - 시나리오 프리셋(인기 편향, 버스트/피크, 사용자 군집), 다중 토픽 지원
   - 목표 QPS 보장/스케줄링 개선, 멀티 인스턴스 확장
 - 관측성
+  - ✅ (완료) Grafana 대시보드: "MSA Overview", "Search & Rank" (색인 메트릭 패널 포함)
+  - ✅ (완료) Prometheus Alert Rules: 기존 (5xx, 429, /search p95, CB open) + 신규 (DLQ, Backpressure, Search 색인 실패/지연)
+  - ✅ (완료) Alertmanager 통합: docker-compose 추가, severity 기반 라우팅 설정
   - OpenTelemetry 도입 및 분산 트레이싱(게이트웨이→서비스) + Tempo
   - 로그 스택(Loki) 통합, 코릴레이션 ID 전파 일관화
-  - 대시보드 보강 및 SLO/알람(Alertmanager) 정립
-  - (완료) Prometheus Alert Rules 초안 추가(5xx, 429, /search p95, CB open)
+  - SLO/에러버짓 운영 정립
 - 인프라/배포
-  - Helm 차트(서비스별/공통) 작성 및 K8s 배포 파이프라인 구성
-  - Argo CD(3단계) GitOps, 시크릿/구성 분리(환경별 values)
+  - (완료) Helm 차트 전체 작성: 7개 서비스 + common 라이브러리 차트
+  - (완료) 환경별 values 파일: dev/staging/prod (리소스/로깅/스케일링 차별화)
+  - (진행) K8s 로컬 배포 테스트 및 차트 검증
+  - K8s 배포 파이프라인 구성, 이미지 레지스트리 연동
+  - Argo CD(3단계) GitOps, 시크릿/구성 외부 관리(Sealed Secrets/External Secrets)
   - 로컬 Compose 추가 개선 사항(필요 시) 및 개발자 UX 향상
 - 데이터/스키마 거버넌스
   - 스키마 레지스트리/호환성 룰, 버저닝 전략
@@ -100,7 +122,9 @@
 - 프런트엔드/데모
   - Demo UI(2단계 로드맵), 실시간 랭킹/검색 대시보드 구현
 - 문서화
-  - 손상된 문서(`docs/architecture.md`) 인코딩/내용 복구 및 최신화
+  - (완료) 손상된 `docs/architecture.md` 복구: 최신 구현 상태 반영
+  - (완료) Auth 스코프 매핑 문서: `docs/auth-scope-mapping.md` 추가
+  - (완료) README.md 업데이트: DLQ, Helm, Circuit Breaker 완료 상태 반영
   - 운영 가이드/런북/장애 대응 플로우 추가
 
 ## 참고(로드맵 매핑)
@@ -130,9 +154,12 @@
 
 ### Event Ingest
 - Now
-  - 스키마 유효성/배압/기본 재시도, 배치 처리 최적화(M1)
+  - (완료) DLQ/재처리 경로: 완전한 워크플로우(PENDING→APPROVED→REPROCESSED)
+  - (완료) 배압 처리: Semaphore 기반 동시성 제어
+  - (완료) 기본 재시도 강화: 무제한 재시도 + DLQ 폴백
+  - 스키마 유효성 강화, 배치 처리 최적화(M1)
 - Next
-  - DLQ/재처리 경로, 멱등 프로듀서/전송 보장 튜닝(M2)
+  - 멱등 프로듀서/전송 보장 튜닝(M2)
 - Later
   - 초고EPS 구간 튜닝, 속도 제어 API/할당량(M3)
 
@@ -146,17 +173,22 @@
 
 ### Catalog Service
 - Now
-  - 인덱스/쿼리 점검(M1)
+  - ✅ (완료) 인덱스 최적화: Flyway V2 마이그레이션으로 4개 인덱스 추가(title, tags GIN, updated_at, version)(M1)
+  - ✅ (완료) Optimistic Locking: version 컬럼 기반 동시성 제어, UPDATE 시 자동 증가(M1)
+  - ✅ (완료) 통합 테스트: 버전 증가 검증, 동시 upsert 테스트 강화(M1)
 - Next
-  - 동시성/중복 처리, 모델 확장(카테고리/작성자)(M2)
+  - 모델 확장(카테고리/작성자), 트랜잭션 경합 처리 고도화(M2)
 - Later
   - 데이터 라이프사이클/보존 정책, 감사/변경 이력(M3)
 
 ### Search Service
 - Now
-  - 인덱스 매핑 점검, 색인 오류 로깅/재시도 기본(M1)
+  - ✅ (완료) @RetryableTopic: 3회 재시도 + exponential backoff, DLT 전송(catalog.upsert.v1.dlt)(M1)
+  - ✅ (완료) 메트릭 추가: search_index_failure(DLT), search_index_latency(Timer)(M1)
+  - ✅ (완료) DLT 핸들러: 영구 실패 이벤트 로깅 및 메트릭 기록(M1)
+  - ✅ (완료) Grafana 대시보드: 색인 메트릭 패널 추가(실패율, 지연, DLT 유입)(M1)
 - Next
-  - 동의어/사전 적용, 하이라이트 품질 개선, 페이지네이션 전략(M2)
+  - 동의어/사전 확장, 하이라이트 품질 개선, 페이지네이션 전략(M2)
 - Later
   - 재색인 파이프라인/백필, ILM/롤오버/스냅샷(M3)
 
@@ -170,7 +202,9 @@
 
 ### Observability
 - Now
-  - 대시보드 기본 구성 완료(HTTP/Rank/Generator), 알람 초안(M1)
+  - ✅ (완료) 대시보드 기본 구성: "MSA Overview", "Search & Rank" (색인 메트릭 패널 포함)(M1)
+  - ✅ (완료) Prometheus Alert Rules: DLQ, Backpressure, Search 색인 실패/지연 알림 추가(M1)
+  - ✅ (완료) Alertmanager 통합: Severity 라우팅, Slack/이메일 설정 가능(M1)
 - Next
   - OTel + Tempo 트레이싱, Loki 로그 수집/코릴레이션(M2)
 - Later
@@ -178,15 +212,21 @@
 
 ### Platform/Infra
 - Now
-  - Helm 차트 스캐폴딩(공통/서비스)(M1)
+  - (완료) Helm 차트 전체 작성: 7개 서비스 + common 라이브러리
+  - (완료) 환경별 values 분리: dev/prod 설정 완료
+  - (진행) K8s 로컬 배포 테스트(minikube/k3s)
 - Next
-  - K8s 배포 파이프라인, 환경별 values/시크릿 분리(M2)
+  - K8s 배포 파이프라인 구성, CI/CD 이미지 빌드 자동화
+  - 시크릿 외부 관리(Sealed Secrets/External Secrets)(M2)
 - Later
   - Argo CD GitOps, Service Mesh/트래픽 정책(M3)
 
 ### 문서/거버넌스
 - Now
-  - `docs/architecture.md` 복구/최신화, 운영 가이드 초안(M1)
+  - (완료) `docs/architecture.md` 복구/최신화: 완전히 재작성
+  - (완료) `docs/auth-scope-mapping.md` 추가: RS256/JWKS 상세 가이드
+  - (완료) README.md 최신화: 완료된 기능(DLQ, Helm, Circuit Breaker) 반영
+  - 운영 가이드 초안 작성(M1)
 - Next
   - 스키마 레지스트리/호환성 규칙, 버저닝 정책(M2)
 - Later
@@ -196,3 +236,72 @@
 - M1 코어 데모: ingest→rank→search 경로 데모, 기본 보안/관측성, CI 빌드/로컬 실행 안정화
 - M2 운영성/데모 고도화: generator 시나리오, OTel/Loki/Tempo, Helm+K8s, 검색 고도화, Auth 확장
 - M3 프로덕션 준비: GitOps, 복원력/성능 튜닝, 데이터 거버넌스/ILM, 고급 라우팅/메시
+
+---
+
+## 추천 다음 작업 (우선순위별)
+
+### 🔴 우선순위 1: K8s 로컬 배포 테스트 (2-4시간)
+**목표**: Helm 차트 실제 동작 검증
+
+**작업**:
+1. minikube 또는 k3s 설치
+   ```bash
+   # Windows
+   choco install minikube kubernetes-helm
+   minikube start --driver=docker
+   ```
+2. Helm 차트 검증
+   ```bash
+   helm lint ./platform/helm/charts/api-gateway
+   helm install test ./platform/helm/charts/api-gateway --dry-run --debug
+   ```
+3. 실제 배포 및 테스트
+   ```bash
+   kubectl create namespace msa-webtoon-test
+   helm install api-gateway ./platform/helm/charts/api-gateway \
+     --namespace msa-webtoon-test --values ./platform/helm/charts/api-gateway/values-dev.yaml
+   kubectl get pods -n msa-webtoon-test
+   ```
+
+### 🟡 우선순위 2: CI/CD 파이프라인 확장 (4-6시간)
+**목표**: 모든 서비스 자동 이미지 빌드
+
+**현재 문제**: rank-service만 이미지 빌드, 다른 6개 서비스는 수동
+
+**작업**:
+- Jenkinsfile 수정: 7개 서비스 모두 Jib 이미지 빌드
+- Docker Registry 설정 (Docker Hub/Harbor)
+- Helm values 이미지 경로 업데이트
+
+**효과**: 자동화된 빌드, 일관된 버전 관리, K8s 배포 기반 마련
+
+### 🟢 우선순위 3: OpenTelemetry 도입 (1-2일)
+**목표**: 게이트웨이→서비스 전체 분산 트레이싱
+
+**작업**:
+1. OTel Java Agent 추가 (각 서비스 Dockerfile)
+2. Tempo 추가 (docker-compose.yml)
+3. Grafana-Tempo 연동
+4. Trace ID 로그 포함
+
+**효과**: 요청 흐름 완전 가시화, 병목 지점 식별, 디버깅 효율 향상
+
+### 🔵 우선순위 4: Event Generator 시나리오 프리셋 (6-8시간)
+**목표**: 다양한 부하 패턴 테스트
+
+**작업**:
+- 시나리오 정의: NORMAL, BURST, POPULAR_BIAS, RANDOM_SPIKE
+- API 엔드포인트 추가: `POST /generator/start?scenario=BURST&eps=1000`
+
+**효과**: 현실적인 부하 테스트, 랭킹 알고리즘 검증, 성능 병목 발견
+
+### 💡 Quick Wins (즉시 가능)
+1. **Helm Lint 실행** (10분): 7개 차트 검증
+2. **Docker 인프라 기동 후 전체 테스트** (30분):
+   ```bash
+   cd platform/local && docker-compose up -d
+   ./gradlew clean test jacocoTestReport --continue
+   python coverage_report.py
+   ```
+3. **Grafana Alert Rule 테스트** (15분): 알림 트리거 검증
