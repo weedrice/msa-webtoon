@@ -26,8 +26,5 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:kafka'
     testImplementation platform('org.testcontainers:testcontainers-bom:1.19.8') // 안정 버전
-    testImplementation 'com.github.tomakehurst:wiremock-jre8:2.35.0'
-    testImplementation 'io.jsonwebtoken:jjwt-api:0.12.5'
-    testRuntimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
-    testRuntimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+    testImplementation project(':libs:common-test')
 }

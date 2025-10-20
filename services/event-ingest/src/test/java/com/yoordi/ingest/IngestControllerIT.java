@@ -8,7 +8,7 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -32,7 +32,7 @@ class IngestControllerIT {
     static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.3"));
 
     static WireMockServer wm;
-    static com.yoordi.rank.test.JwksTestUtil.Keys keys;
+    static com.yoordi.test.JwksTestUtil.Keys keys;
 
     @LocalServerPort
     int port;
@@ -50,8 +50,8 @@ class IngestControllerIT {
     static void beforeAll() throws Exception {
         wm = new WireMockServer(0);
         wm.start();
-        keys = com.yoordi.rank.test.JwksTestUtil.generateKeys();
-        com.yoordi.rank.test.JwksTestUtil.stubJwks(wm, keys);
+        keys = com.yoordi.test.JwksTestUtil.generateKeys();
+        com.yoordi.test.JwksTestUtil.stubJwks(wm, keys);
     }
 
     @AfterAll
@@ -59,7 +59,7 @@ class IngestControllerIT {
 
     @Test
     void postEventPublishesToKafka() throws Exception {
-        String token = com.yoordi.rank.test.JwksTestUtil.issueToken(keys, "it", "write:ingest", 300);
+        String token = com.yoordi.test.JwksTestUtil.issueToken(keys, "it", "write:ingest", 300);
         HttpHeaders h = new HttpHeaders();
         h.setBearerAuth(token);
         h.setContentType(MediaType.APPLICATION_JSON);

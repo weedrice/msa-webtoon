@@ -1,0 +1,31 @@
+plugins {
+    id 'java-library'
+}
+
+java {
+    sourceCompatibility = '17'
+    targetCompatibility = '17'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // JWT
+    api 'io.jsonwebtoken:jjwt-api:0.12.5'
+    api 'io.jsonwebtoken:jjwt-impl:0.12.5'
+    api 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+
+    // WireMock standalone (bundles all dependencies including servlet)
+    api 'com.github.tomakehurst:wiremock-jre8-standalone:2.35.1'
+
+    // BouncyCastle for cryptography
+    api 'org.bouncycastle:bcprov-jdk18on:1.77'
+
+    // Jackson for JSON
+    api 'com.fasterxml.jackson.core:jackson-databind'
+
+    // Spring Boot Test
+    api 'org.springframework.boot:spring-boot-starter-test'
+}

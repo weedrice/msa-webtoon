@@ -339,6 +339,82 @@ class CatalogServiceIntegrationTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(id, response.getBody().get("id"));
         assertNotNull(response.getBody().get("title"));
+
+        // Version이 존재하고 증가했는지 확인 (최소 4번 업데이트 = version 4 이상)
+        Object versionObj = response.getBody().get("version");
+        assertNotNull(versionObj, "Version should be present");
+        assertTrue(((Number) versionObj).longValue() >= 4,
+                "Version should be at least 4 after 5 upserts (initial insert + 4 updates)");
+    }
+
+    @Test
+    void testVersionIncrementOnUpdate() {
+        // Given: 초기 카탈로그 생성
+        String id = "w-version-test-001";
+        CatalogUpsertReq request1 = new CatalogUpsertReq(
+                id,
+                "Original Title",
+                "Original Description",
+                List.of("tag1")
+        );
+
+        restTemplate.postForEntity(
+                "http://localhost:" + port + "/catalog/upsert",
+                request1,
+                Map.class
+        );
+
+        // When: 첫 번째 조회
+        ResponseEntity<Map> response1 = restTemplate.getForEntity(
+                "http://localhost:" + port + "/catalog/" + id,
+                Map.class
+        );
+        Long version1 = ((Number) response1.getBody().get("version")).longValue();
+        assertEquals(0L, version1, "Initial version should be 0");
+
+        // And: 첫 번째 업데이트
+        CatalogUpsertReq request2 = new CatalogUpsertReq(
+                id,
+                "Updated Title 1",
+                "Updated Description 1",
+                List.of("tag2")
+        );
+
+        restTemplate.postForEntity(
+                "http://localhost:" + port + "/catalog/upsert",
+                request2,
+                Map.class
+        );
+
+        // Then: 버전이 증가해야 함
+        ResponseEntity<Map> response2 = restTemplate.getForEntity(
+                "http://localhost:" + port + "/catalog/" + id,
+                Map.class
+        );
+        Long version2 = ((Number) response2.getBody().get("version")).longValue();
+        assertEquals(1L, version2, "Version should increment to 1 after first update");
+
+        // And: 두 번째 업데이트
+        CatalogUpsertReq request3 = new CatalogUpsertReq(
+                id,
+                "Updated Title 2",
+                "Updated Description 2",
+                List.of("tag3")
+        );
+
+        restTemplate.postForEntity(
+                "http://localhost:" + port + "/catalog/upsert",
+                request3,
+                Map.class
+        );
+
+        // Then: 버전이 다시 증가해야 함
+        ResponseEntity<Map> response3 = restTemplate.getForEntity(
+                "http://localhost:" + port + "/catalog/" + id,
+                Map.class
+        );
+        Long version3 = ((Number) response3.getBody().get("version")).longValue();
+        assertEquals(2L, version3, "Version should increment to 2 after second update");
     }
 
     /**

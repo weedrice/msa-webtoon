@@ -1,11 +1,12 @@
 package com.yoordi.catalog.api;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.yoordi.test.JwksTestUtil;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -20,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class CatalogSecurityIT {
 
     static WireMockServer wm;
-    static com.yoordi.rank.test.JwksTestUtil.Keys keys;
+    static JwksTestUtil.Keys keys;
 
     @LocalServerPort
     int port;
@@ -36,8 +37,8 @@ class CatalogSecurityIT {
     @BeforeAll
     static void beforeAll() throws Exception {
         wm = new WireMockServer(0); wm.start();
-        keys = com.yoordi.rank.test.JwksTestUtil.generateKeys();
-        com.yoordi.rank.test.JwksTestUtil.stubJwks(wm, keys);
+        keys = JwksTestUtil.generateKeys();
+        JwksTestUtil.stubJwks(wm, keys);
     }
 
     @AfterAll static void afterAll(){ wm.stop(); }
@@ -50,7 +51,7 @@ class CatalogSecurityIT {
         assertEquals(401, unauth.getStatusCodeValue());
 
         // with scope write:catalog
-        String tok = com.yoordi.rank.test.JwksTestUtil.issueToken(keys, "it", "write:catalog", 300);
+        String tok = JwksTestUtil.issueToken(keys, "it", "write:catalog", 300);
         HttpHeaders h = new HttpHeaders(); h.setBearerAuth(tok);
         ResponseEntity<Map> ok = rest.postForEntity("http://localhost:"+port+"/catalog/upsert", new HttpEntity<>(reqBody,h), Map.class);
         assertEquals(200, ok.getStatusCodeValue());

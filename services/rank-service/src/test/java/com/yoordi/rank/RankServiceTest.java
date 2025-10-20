@@ -202,7 +202,7 @@ class RankServiceTest {
     @Test
     void testRankServiceDirectly() {
         // When: RankService를 직접 호출
-        List<String> topContent = rankService.getTopContentIds("60s", 3);
+        List<String> topContent = rankService.getTopContentIds("60s", 3, 1);
 
         // Then: 최대 3개 반환
         assertNotNull(topContent);
@@ -212,7 +212,7 @@ class RankServiceTest {
     @Test
     void testRankServiceDetailsDirectly() {
         // When: RankService details를 직접 호출
-        List<Map<String, Object>> details = rankService.getTopContentDetails("60s", 3);
+        List<Map<String, Object>> details = rankService.getTopContentDetails("60s", 3, 1);
 
         // Then: contentId와 count 포함
         assertNotNull(details);
@@ -236,14 +236,14 @@ class RankServiceTest {
         rankSink.update(60, windowEnd, contentId, count);
 
         // Then: 데이터가 저장되어야 함 (예외 발생 안함)
-        List<Map<String, Object>> details = rankService.getTopContentDetails("60s", 10);
+        List<Map<String, Object>> details = rankService.getTopContentDetails("60s", 10, 1);
         assertNotNull(details);
     }
 
     @Test
     void testEmptyRankings() {
         // When: 존재하지 않는 윈도우 데이터 요청
-        List<String> topContent = rankService.getTopContentIds("10s", 10);
+        List<String> topContent = rankService.getTopContentIds("10s", 10, 1);
 
         // Then: 빈 리스트 반환 (null 아님)
         assertNotNull(topContent);

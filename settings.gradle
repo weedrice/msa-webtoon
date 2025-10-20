@@ -3,6 +3,7 @@ rootProject.name = 'msa-webtoon'
 include(
         'libs:common-domain',
         'libs:common-observability',
+        'libs:common-test',
         'services:api-gateway',
         'services:auth-service',
         'services:catalog-service',

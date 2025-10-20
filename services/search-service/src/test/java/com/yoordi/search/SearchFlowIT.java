@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -45,7 +45,7 @@ class SearchFlowIT {
     static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.3")).withNetwork(net);
 
     static WireMockServer wm;
-    static com.yoordi.rank.test.JwksTestUtil.Keys keys;
+    static com.yoordi.test.JwksTestUtil.Keys keys;
 
     @Value("${search.index}")
     String index;
@@ -70,8 +70,8 @@ class SearchFlowIT {
     static void beforeAll() throws Exception {
         wm = new WireMockServer(0);
         wm.start();
-        keys = com.yoordi.rank.test.JwksTestUtil.generateKeys();
-        com.yoordi.rank.test.JwksTestUtil.stubJwks(wm, keys);
+        keys = com.yoordi.test.JwksTestUtil.generateKeys();
+        com.yoordi.test.JwksTestUtil.stubJwks(wm, keys);
     }
 
     @AfterAll
@@ -100,7 +100,7 @@ class SearchFlowIT {
         Thread.sleep(1500);
 
         // query search
-        String token = com.yoordi.rank.test.JwksTestUtil.issueToken(keys, "it", "read:search", 300);
+        String token = com.yoordi.test.JwksTestUtil.issueToken(keys, "it", "read:search", 300);
         HttpHeaders h = new HttpHeaders();
         h.setBearerAuth(token);
         ResponseEntity<Map> resp = rest.exchange("http://localhost:"+port+"/search?q=Hello&size=10", HttpMethod.GET, new org.springframework.http.HttpEntity<>(h), Map.class);
