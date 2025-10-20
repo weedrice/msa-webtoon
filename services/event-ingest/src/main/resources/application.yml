@@ -102,6 +102,16 @@ logging:
 # Application specific
 topic:
   pageView: events.page_view.v1
+    dlq: ${TOPIC_PAGEVIEW_DLQ:events.page_view.v1.dlq}
+
+# Event Ingest specific configuration
+ingest:
+  # Backpressure configuration
+  backpressure:
+    max-concurrent: ${INGEST_MAX_CONCURRENT:1000}  # Max concurrent publish operations
+  # Metrics configuration
+  metrics:
+    dlq-counter-name: ingest.events.dlq
 
 # Performance tuning for different environments
 ---
