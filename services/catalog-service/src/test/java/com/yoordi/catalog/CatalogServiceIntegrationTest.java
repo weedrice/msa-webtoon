@@ -62,6 +62,7 @@ class CatalogServiceIntegrationTest {
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
         registry.add("spring.flyway.enabled", () -> "false");
+        registry.add("security.permitAll", () -> "true");
     }
 
     @BeforeEach
