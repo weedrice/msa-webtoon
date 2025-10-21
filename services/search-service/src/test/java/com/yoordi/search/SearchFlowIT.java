@@ -44,9 +44,11 @@ class SearchFlowIT {
             DockerImageName.parse("opensearchproject/opensearch:2.12.0")
                 .asCompatibleSubstituteFor("docker.elastic.co/elasticsearch/elasticsearch")
         )
-        .withEnv("OPENSEARCH_JAVA_OPTS","-Xms512m -Xmx512m")
+        .withEnv("OPENSEARCH_JAVA_OPTS","-Xms256m -Xmx256m")
         .withEnv("discovery.type","single-node")
         .withEnv("plugins.security.disabled","true")
+        .withEnv("DISABLE_INSTALL_DEMO_CONFIG","true")
+        .withEnv("compatibility.override_main_response_version","true")
         .withNetwork(net);
 
     @Container
@@ -69,7 +71,7 @@ class SearchFlowIT {
 
     @DynamicPropertySource
     static void props(DynamicPropertyRegistry r) {
-        r.add("OPENSEARCH_URL", () -> os.getHttpHostAddress());
+        r.add("opensearch.url", () -> "http://" + os.getHttpHostAddress());
         r.add("KAFKA_BOOTSTRAP", kafka::getBootstrapServers);
         r.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", () -> "http://localhost:" + wm.port() + "/.well-known/jwks.json");
     }

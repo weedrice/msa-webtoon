@@ -74,7 +74,18 @@ public class SearchController {
         }
 
         var req = new SearchRequest(index).source(sourceBuilder);
-        var resp = os.search(req, RequestOptions.DEFAULT);
+        org.opensearch.action.search.SearchResponse resp;
+        try {
+            resp = os.search(req, RequestOptions.DEFAULT);
+        } catch (org.opensearch.OpenSearchStatusException se) {
+            if (se.status() != null && se.status().getStatus() == 404) {
+                return Map.of(
+                    "total", 0,
+                    "results", java.util.Collections.emptyList()
+                );
+            }
+            throw se;
+        }
         var hits = resp.getHits().getHits();
 
         var results = new ArrayList<Map<String, Object>>(hits.length);

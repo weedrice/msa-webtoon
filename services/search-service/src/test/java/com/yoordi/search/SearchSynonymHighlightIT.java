@@ -36,9 +36,11 @@ class SearchSynonymHighlightIT {
             DockerImageName.parse("opensearchproject/opensearch:2.12.0")
                 .asCompatibleSubstituteFor("docker.elastic.co/elasticsearch/elasticsearch")
         )
-        .withEnv("OPENSEARCH_JAVA_OPTS","-Xms512m -Xmx512m")
+        .withEnv("OPENSEARCH_JAVA_OPTS","-Xms256m -Xmx256m")
         .withEnv("discovery.type","single-node")
-        .withEnv("plugins.security.disabled","true");
+        .withEnv("plugins.security.disabled","true")
+        .withEnv("DISABLE_INSTALL_DEMO_CONFIG","true")
+        .withEnv("compatibility.override_main_response_version","true");
 
     @LocalServerPort
     int port;
@@ -54,7 +56,7 @@ class SearchSynonymHighlightIT {
 
     @DynamicPropertySource
     static void props(DynamicPropertyRegistry r) {
-        r.add("OPENSEARCH_URL", () -> os.getHttpHostAddress());
+        r.add("opensearch.url", () -> "http://" + os.getHttpHostAddress());
         r.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", () -> "http://localhost:9/.well-known/jwks.json");
         r.add("search.bootstrap.enabled", () -> "false");
     }
@@ -62,11 +64,7 @@ class SearchSynonymHighlightIT {
     @Test
     void synonymSearchAndHighlight() throws Exception {
         // settings: simple synonym filter (no plugin), analyzers
-        String settings = "{"+
-                "\"analysis\": {"+
-                "  \"filter\": {\"syns\": {\"type\": \"synonym_graph\", \"synonyms\": [\"웹툰, 만화\"]}},"+
-                "  \"analyzer\": {\"my_syn\": {\"type\": \"custom\", \"tokenizer\": \"standard\", \"filter\": [\"lowercase\", \"syns\"]}}"+
-                "}}";
+        String settings = "{\n  \"analysis\": {\n    \"filter\": {\"syns\": {\"type\": \"synonym_graph\", \"synonyms\": [\"comic, cartoon\"]}},\n    \"analyzer\": {\"my_syn\": {\"type\": \"custom\", \"tokenizer\": \"standard\", \"filter\": [\"lowercase\", \"syns\"]}}\n  }\n}";
         String mapping = "{"+
                 "\"properties\": {"+
                 "  \"id\": {\"type\": \"keyword\"},"+
@@ -80,11 +78,9 @@ class SearchSynonymHighlightIT {
         create.mapping(mapping, XContentType.JSON);
         client.indices().create(create, RequestOptions.DEFAULT);
 
-        // index doc: title contains "웹툰"
+        // index doc: title contains base term "comic"
         String id = "w-hl-" + java.util.UUID.randomUUID().toString().substring(0,8);
-        String doc = "{"+
-                "\"id\":\""+id+"\",\"title\":\"멋진 웹툰 작품\",\"desc\":\"하이라이트 테스트\",\"tags\":[\"t\"]"+
-                "}";
+        String doc = "{\n  \"id\":\""+id+"\",\n  \"title\":\"great comic work\",\n  \"desc\":\"simple desc\",\n  \"tags\":[\"t\"]\n}";
         client.index(new IndexRequest(index).id(id).source(doc, XContentType.JSON), RequestOptions.DEFAULT);
 
         // refresh to make searchable
@@ -93,7 +89,7 @@ class SearchSynonymHighlightIT {
         // call search with synonym term "만화" and highlight=true
         HttpHeaders h = new HttpHeaders();
         // Disable JWT for this test by not requiring it (search-service allows when JWKS dead URL?)
-        ResponseEntity<Map> resp = rest.getForEntity("http://localhost:"+port+"/search?q="+java.net.URLEncoder.encode("만화","UTF-8")+"&size=10&highlight=true", Map.class);
+        ResponseEntity<Map> resp = rest.getForEntity("http://localhost:"+port+"/search?q="+java.net.URLEncoder.encode("cartoon","UTF-8")+"&size=10&highlight=true", Map.class);
         Assertions.assertEquals(200, resp.getStatusCodeValue());
         var results = (List<Map<String,Object>>) resp.getBody().get("results");
         boolean found = results.stream().anyMatch(m -> id.equals(m.get("id")));
@@ -104,4 +100,6 @@ class SearchSynonymHighlightIT {
         Assertions.assertNotNull(hl, "highlight should be present");
     }
 }
+
+
 

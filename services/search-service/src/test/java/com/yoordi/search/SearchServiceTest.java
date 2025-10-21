@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
-        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration,org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration"
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration,org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration,org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration"
     }
 )
 @org.springframework.test.context.ActiveProfiles("test")
@@ -30,11 +30,13 @@ class SearchServiceTest {
 
     @Container
     static ElasticsearchContainer opensearch = new ElasticsearchContainer(
-            DockerImageName.parse("opensearchproject/opensearch:2.11.0")
+            DockerImageName.parse("opensearchproject/opensearch:2.12.0")
                     .asCompatibleSubstituteFor("docker.elastic.co/elasticsearch/elasticsearch")
-    ).withEnv("OPENSEARCH_JAVA_OPTS", "-Xms512m -Xmx512m")
+    ).withEnv("OPENSEARCH_JAVA_OPTS", "-Xms256m -Xmx256m")
      .withEnv("discovery.type", "single-node")
-     .withEnv("plugins.security.disabled", "true");
+     .withEnv("plugins.security.disabled", "true")
+     .withEnv("DISABLE_INSTALL_DEMO_CONFIG", "true")
+     .withEnv("compatibility.override_main_response_version", "true");
 
     @LocalServerPort
     private int port;
@@ -60,9 +62,9 @@ class SearchServiceTest {
 
     @Test
     void testSearch() {
-        ResponseEntity<java.util.List> response = restTemplate.getForEntity(
+        ResponseEntity<java.util.Map> response = restTemplate.getForEntity(
                 "http://localhost:" + port + "/search?q=test&size=10",
-                java.util.List.class
+                java.util.Map.class
         );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
