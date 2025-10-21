@@ -1,9 +1,131 @@
 pipeline {
   agent any
+
+  environment {
+    DOCKER_REGISTRY = "${env.DOCKER_REGISTRY ?: 'docker.io'}"
+    REGISTRY_CREDENTIAL_ID = 'docker-registry-credentials'
+    KUBECTL_NAMESPACE = "${env.KUBECTL_NAMESPACE ?: 'msa-webtoon'}"
+    BUILD_VERSION = "${env.BUILD_NUMBER ?: '0.1.0'}"
+  }
+
   stages {
-    stage('Build') { steps { sh './gradlew clean build -x test' } }
-    stage('Test')  { steps { sh './gradlew test' } }
-    stage('Images'){ steps { sh './gradlew :services:rank-service:jib -x test' } }
-    stage('Helm')  { steps { sh 'helm upgrade --install rank-service platform/helm/charts/rank-service -n apps' } }
+    stage('Build') {
+      steps {
+        echo '=== Building all services ==='
+        sh './gradlew clean build -x test'
+      }
+    }
+
+    stage('Test') {
+      steps {
+        echo '=== Running tests ==='
+        sh './gradlew test jacocoTestReport'
+      }
+      post {
+        always {
+          junit '**/build/test-results/test/*.xml'
+          publishHTML([
+            allowMissing: false,
+            alwaysLinkToLastBuild: true,
+            keepAll: true,
+            reportDir: 'build/reports/jacoco/test/html',
+            reportFiles: 'index.html',
+            reportName: 'JaCoCo Coverage Report'
+          ])
+        }
+      }
+    }
+
+    stage('Build Images') {
+      parallel {
+        stage('api-gateway') {
+          steps {
+            echo '=== Building api-gateway image ==='
+            sh './gradlew :services:api-gateway:jib -Djib.to.image=${DOCKER_REGISTRY}/msa-webtoon/api-gateway:${BUILD_VERSION}'
+          }
+        }
+        stage('auth-service') {
+          steps {
+            echo '=== Building auth-service image ==='
+            sh './gradlew :services:auth-service:jib -Djib.to.image=${DOCKER_REGISTRY}/msa-webtoon/auth-service:${BUILD_VERSION}'
+          }
+        }
+        stage('catalog-service') {
+          steps {
+            echo '=== Building catalog-service image ==='
+            sh './gradlew :services:catalog-service:jib -Djib.to.image=${DOCKER_REGISTRY}/msa-webtoon/catalog-service:${BUILD_VERSION}'
+          }
+        }
+        stage('event-generator') {
+          steps {
+            echo '=== Building event-generator image ==='
+            sh './gradlew :services:event-generator:jib -Djib.to.image=${DOCKER_REGISTRY}/msa-webtoon/event-generator:${BUILD_VERSION}'
+          }
+        }
+        stage('event-ingest') {
+          steps {
+            echo '=== Building event-ingest image ==='
+            sh './gradlew :services:event-ingest:jib -Djib.to.image=${DOCKER_REGISTRY}/msa-webtoon/event-ingest:${BUILD_VERSION}'
+          }
+        }
+        stage('rank-service') {
+          steps {
+            echo '=== Building rank-service image ==='
+            sh './gradlew :services:rank-service:jib -Djib.to.image=${DOCKER_REGISTRY}/msa-webtoon/rank-service:${BUILD_VERSION}'
+          }
+        }
+        stage('search-service') {
+          steps {
+            echo '=== Building search-service image ==='
+            sh './gradlew :services:search-service:jib -Djib.to.image=${DOCKER_REGISTRY}/msa-webtoon/search-service:${BUILD_VERSION}'
+          }
+        }
+      }
+    }
+
+    stage('Deploy to K8s') {
+      when {
+        branch 'main'
+      }
+      steps {
+        echo '=== Deploying all services to Kubernetes ==='
+        script {
+          def services = [
+            'api-gateway',
+            'auth-service',
+            'catalog-service',
+            'event-generator',
+            'event-ingest',
+            'rank-service',
+            'search-service'
+          ]
+
+          services.each { service ->
+            sh """
+              helm upgrade --install ${service} \
+                platform/helm/charts/${service} \
+                --namespace ${KUBECTL_NAMESPACE} \
+                --create-namespace \
+                --set image.repository=${DOCKER_REGISTRY}/msa-webtoon/${service} \
+                --set image.tag=${BUILD_VERSION} \
+                --wait \
+                --timeout 5m
+            """
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo '=== Pipeline completed successfully ==='
+    }
+    failure {
+      echo '=== Pipeline failed ==='
+    }
+    always {
+      cleanWs()
+    }
   }
 }
