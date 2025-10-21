@@ -78,7 +78,7 @@ spring:
                   - java.net.SocketTimeoutException
                   - io.netty.channel.ConnectTimeoutException
                   - io.netty.handler.timeout.ReadTimeoutException
-          - name: CircuitBreaker
+            - name: CircuitBreaker
               args:
                 name: catalogCb
                 fallbackUri: forward:/__fallback/catalog
@@ -184,12 +184,12 @@ springdoc:
   swagger-ui:
     enabled: true
 
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: ${AUTH_JWKS_URI:http://localhost:8105/.well-known/jwks.json}
+  # merge security config into main spring block
+security:
+  oauth2:
+    resourceserver:
+      jwt:
+        jwk-set-uri: ${AUTH_JWKS_URI:http://localhost:8105/.well-known/jwks.json}
 
 resilience4j:
   circuitbreaker:
