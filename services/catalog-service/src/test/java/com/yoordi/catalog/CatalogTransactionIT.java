@@ -15,6 +15,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.testcontainers.junit.jupiter.Testcontainers
 class CatalogTransactionIT {
 
     @LocalServerPort
@@ -22,6 +23,22 @@ class CatalogTransactionIT {
 
     @Autowired
     TestRestTemplate rest;
+
+    @org.testcontainers.junit.jupiter.Container
+    static org.testcontainers.containers.PostgreSQLContainer<?> postgres = new org.testcontainers.containers.PostgreSQLContainer<>("postgres:15-alpine")
+            .withDatabaseName("testdb")
+            .withUsername("test")
+            .withPassword("test")
+            .withInitScript("schema.sql");
+
+    @org.springframework.test.context.DynamicPropertySource
+    static void props(org.springframework.test.context.DynamicPropertyRegistry r) {
+        r.add("spring.datasource.url", postgres::getJdbcUrl);
+        r.add("spring.datasource.username", postgres::getUsername);
+        r.add("spring.datasource.password", postgres::getPassword);
+        r.add("spring.flyway.enabled", () -> "false");
+        r.add("security.permitAll", () -> "true");
+    }
 
     @Test
     void invalidUpsertDoesNotCreateRow() {
