@@ -1,0 +1,95 @@
+replicaCount: 1  # Event generator typically runs as single instance
+
+image:
+  repository: msa-webtoon/event-generator
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/actuator/prometheus"
+  prometheus.io/port: "8080"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+
+service:
+  type: ClusterIP
+  port: 8080
+
+actuator:
+  enabled: true
+  port: 8080
+
+livenessProbe:
+  enabled: true
+  path: /actuator/health/liveness
+  port: http
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  path: /actuator/health/readiness
+  port: http
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false  # Event generator typically runs as single instance
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+env:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SERVER_PORT: "8080"
+  MANAGEMENT_SERVER_PORT: "8080"
+  # Kafka configuration
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
+  # Event generation settings
+  GENERATOR_AUTO_START: "false"
+  GENERATOR_DEFAULT_EPS: "100"
+  # Logging
+  LOGGING_LEVEL_ROOT: "INFO"
+  LOGGING_LEVEL_COM_YOORDI: "INFO"
+
+envSecrets: {}
+
+config: {}
+
+ingress:
+  enabled: false  # Event generator is internal service, no external access needed

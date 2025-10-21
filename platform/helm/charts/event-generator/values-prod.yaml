@@ -1,0 +1,45 @@
+# Production environment values for event-generator
+# Override base values.yaml settings
+
+replicaCount: 1
+
+image:
+  repository: msa-webtoon/event-generator
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+env:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SERVER_PORT: "8080"
+  MANAGEMENT_SERVER_PORT: "8080"
+  # Kafka configuration
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
+  # Event generation settings
+  GENERATOR_AUTO_START: "false"
+  GENERATOR_DEFAULT_EPS: "100"
+  GENERATOR_MAX_EPS: "10000"
+  # Logging
+  LOGGING_LEVEL_ROOT: "INFO"
+  LOGGING_LEVEL_COM_YOORDI: "INFO"
+  # Production optimizations
+  JAVA_OPTS: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+
+livenessProbe:
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
