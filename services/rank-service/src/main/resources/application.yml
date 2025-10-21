@@ -8,10 +8,11 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
     streams:
       application-id: rank-service
-      state-dir: ${TMPDIR:/tmp}/kstreams
+      state-dir: ${TMPDIR:${java.io.tmpdir}}/kstreams
       properties:
         spring.json.trusted.packages: "*"
         consumer.auto.offset.reset: earliest
+        default.deserialization.exception.handler: org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
     consumer:
       properties:
         spring.json.trusted.packages: "*"

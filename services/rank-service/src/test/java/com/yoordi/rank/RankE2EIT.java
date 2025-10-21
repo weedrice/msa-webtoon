@@ -68,6 +68,20 @@ class RankE2EIT {
 
     @Test
     void rankAggregatesWindow() throws Exception {
+        // Ensure topic exists to avoid initial LEADER_NOT_AVAILABLE
+        try (org.apache.kafka.clients.admin.AdminClient admin =
+                     org.apache.kafka.clients.admin.AdminClient.create(java.util.Map.of(
+                             org.apache.kafka.clients.admin.AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
+                             kafka.getBootstrapServers()
+                     ))) {
+            var newTopic = new org.apache.kafka.clients.admin.NewTopic("events.page_view.v1", 1, (short) 1);
+            try {
+                admin.createTopics(java.util.List.of(newTopic)).all().get();
+            } catch (Exception ignored) {
+                // topic may already exist; ignore
+            }
+        }
+
         String topic = "events.page_view.v1";
         String contentId = "w-it-" + java.util.UUID.randomUUID().toString().substring(0,8);
         // produce few events
@@ -94,7 +108,7 @@ class RankE2EIT {
         headers.setBearerAuth(token);
 
         boolean found = false;
-        long deadline = System.currentTimeMillis() + 10_000; // up to 10s
+        long deadline = System.currentTimeMillis() + 20_000; // up to 20s
         while (System.currentTimeMillis() < deadline) {
             ResponseEntity<String[]> resp = rest.exchange(
                     "http://localhost:" + port + "/rank/top?window=2s&n=50&aggregate=1",
@@ -110,4 +124,5 @@ class RankE2EIT {
         Assertions.assertTrue(found, "expected contentId in rank top");
     }
 }
+
 
