@@ -16,7 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.Network;
-import org.testcontainers.containers.OCOpenSearchContainer;
+import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -25,13 +25,20 @@ import java.util.List;
 import java.util.Map;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.springframework.test.context.ActiveProfiles("test")
 @Testcontainers
 class SearchSynonymHighlightIT {
 
     static Network net = Network.newNetwork();
 
     @Container
-    static OCOpenSearchContainer os = new OCOpenSearchContainer(DockerImageName.parse("opensearchproject/opensearch:2.12.0")).withEnv("plugins.security.disabled","true");
+    static ElasticsearchContainer os = new ElasticsearchContainer(
+            DockerImageName.parse("opensearchproject/opensearch:2.12.0")
+                .asCompatibleSubstituteFor("docker.elastic.co/elasticsearch/elasticsearch")
+        )
+        .withEnv("OPENSEARCH_JAVA_OPTS","-Xms512m -Xmx512m")
+        .withEnv("discovery.type","single-node")
+        .withEnv("plugins.security.disabled","true");
 
     @LocalServerPort
     int port;
@@ -81,7 +88,7 @@ class SearchSynonymHighlightIT {
         client.index(new IndexRequest(index).id(id).source(doc, XContentType.JSON), RequestOptions.DEFAULT);
 
         // refresh to make searchable
-        client.indices().refresh(new org.opensearch.client.indices.RefreshRequest(index), RequestOptions.DEFAULT);
+        client.indices().refresh(new org.opensearch.action.admin.indices.refresh.RefreshRequest(index), RequestOptions.DEFAULT);
 
         // call search with synonym term "만화" and highlight=true
         HttpHeaders h = new HttpHeaders();

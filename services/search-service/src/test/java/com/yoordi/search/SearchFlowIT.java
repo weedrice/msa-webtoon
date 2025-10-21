@@ -22,7 +22,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.Network;
-import org.testcontainers.containers.OCOpenSearchContainer;
+import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -33,13 +33,21 @@ import java.util.Properties;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.springframework.test.context.ActiveProfiles("test")
 @Testcontainers
 class SearchFlowIT {
 
     static Network net = Network.newNetwork();
 
     @Container
-    static OCOpenSearchContainer os = new OCOpenSearchContainer(DockerImageName.parse("opensearchproject/opensearch:2.12.0")).withEnv("plugins.security.disabled","true").withNetwork(net);
+    static ElasticsearchContainer os = new ElasticsearchContainer(
+            DockerImageName.parse("opensearchproject/opensearch:2.12.0")
+                .asCompatibleSubstituteFor("docker.elastic.co/elasticsearch/elasticsearch")
+        )
+        .withEnv("OPENSEARCH_JAVA_OPTS","-Xms512m -Xmx512m")
+        .withEnv("discovery.type","single-node")
+        .withEnv("plugins.security.disabled","true")
+        .withNetwork(net);
 
     @Container
     static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.3")).withNetwork(net);
