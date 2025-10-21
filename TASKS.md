@@ -99,10 +99,14 @@
   - 로그 스택(Loki) 통합, 코릴레이션 ID 전파 일관화
   - SLO/에러버짓 운영 정립
 - 인프라/배포
-  - (완료) Helm 차트 전체 작성: 7개 서비스 + common 라이브러리 차트
-  - (완료) 환경별 values 파일: dev/staging/prod (리소스/로깅/스케일링 차별화)
-  - (진행) K8s 로컬 배포 테스트 및 차트 검증
-  - K8s 배포 파이프라인 구성, 이미지 레지스트리 연동
+  - (완료) Helm 차트 전체 작성: 8개 서비스 (api-gateway, auth-service, catalog-service, event-generator, event-ingest, rank-service, search-service) + common 라이브러리 차트
+  - (완료) 환경별 values 파일: dev/prod (리소스/로깅/스케일링 차별화)
+  - (완료) Jib 이미지 빌드 설정: 모든 서비스에 Jib 플러그인 통일 적용
+  - (완료) Jenkinsfile CI/CD 파이프라인: 8개 서비스 병렬 빌드, 테스트 리포트, K8s 자동 배포 (main 브랜치)
+  - (완료) Docker Registry 연동: setup-registry-secret 스크립트 (sh/ps1), imagePullSecrets 구성
+  - (완료) K8s 배포 스크립트: deploy-all/undeploy-all (sh/ps1) - 환경별 일괄 배포/삭제
+  - (완료) K8s 배포 가이드: platform/k8s/README.md (Docker Hub/GHCR/Private Registry 설정, 로컬/프로덕션 배포 가이드)
+  - (진행) K8s 로컬 배포 테스트 및 차트 검증 (minikube/k3s)
   - Argo CD(3단계) GitOps, 시크릿/구성 외부 관리(Sealed Secrets/External Secrets)
   - 로컬 Compose 추가 개선 사항(필요 시) 및 개발자 UX 향상
 - 데이터/스키마 거버넌스
@@ -212,11 +216,14 @@
 
 ### Platform/Infra
 - Now
-  - (완료) Helm 차트 전체 작성: 7개 서비스 + common 라이브러리
-  - (완료) 환경별 values 분리: dev/prod 설정 완료
+  - ✅ (완료) Helm 차트 전체 작성: 8개 서비스 + common 라이브러리
+  - ✅ (완료) 환경별 values 분리: dev/prod 설정 완료
+  - ✅ (완료) Jib 이미지 빌드: 모든 서비스 통일 구성
+  - ✅ (완료) Jenkinsfile CI/CD: 병렬 빌드, 테스트 리포트, K8s 자동 배포
+  - ✅ (완료) Docker Registry 연동: Secret 스크립트, 배포 가이드 작성
+  - ✅ (완료) K8s 배포 스크립트: deploy-all/undeploy-all (환경별 일괄 배포)
   - (진행) K8s 로컬 배포 테스트(minikube/k3s)
 - Next
-  - K8s 배포 파이프라인 구성, CI/CD 이미지 빌드 자동화
   - 시크릿 외부 관리(Sealed Secrets/External Secrets)(M2)
 - Later
   - Argo CD GitOps, Service Mesh/트래픽 정책(M3)
@@ -264,17 +271,17 @@
    kubectl get pods -n msa-webtoon-test
    ```
 
-### 🟡 우선순위 2: CI/CD 파이프라인 확장 (4-6시간)
+### ✅ ~~우선순위 2: CI/CD 파이프라인 확장~~ (완료)
 **목표**: 모든 서비스 자동 이미지 빌드
 
-**현재 문제**: rank-service만 이미지 빌드, 다른 6개 서비스는 수동
+**완료 사항**:
+- ✅ Jenkinsfile 수정: 8개 서비스 모두 Jib 병렬 빌드 구성
+- ✅ Docker Registry 연동: setup-registry-secret 스크립트 (sh/ps1) 제공
+- ✅ Helm values 이미지 경로: 모든 차트에 통일된 구조 적용
+- ✅ K8s 배포 자동화: deploy-all/undeploy-all 스크립트 (환경별 일괄 배포)
+- ✅ 배포 가이드: platform/k8s/README.md (Docker Hub/GHCR/Private Registry 설정 가이드)
 
-**작업**:
-- Jenkinsfile 수정: 7개 서비스 모두 Jib 이미지 빌드
-- Docker Registry 설정 (Docker Hub/Harbor)
-- Helm values 이미지 경로 업데이트
-
-**효과**: 자동화된 빌드, 일관된 버전 관리, K8s 배포 기반 마련
+**효과**: 자동화된 빌드, 일관된 버전 관리, K8s 배포 기반 완성
 
 ### 🟢 우선순위 3: OpenTelemetry 도입 (1-2일)
 **목표**: 게이트웨이→서비스 전체 분산 트레이싱
