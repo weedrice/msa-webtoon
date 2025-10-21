@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8102
 
 spring:
@@ -12,7 +12,7 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
         consumer.auto.offset.reset: earliest
-        default.deserialization.exception.handler: org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
+        default.deserialization.exception.handler: org.apache.kafka.streams.errors.LogAndContinueExceptionHandler`n        retries: 10`n        request.timeout.ms: 60000`n        reconnect.backoff.ms: 200`n        reconnect.backoff.max.ms: 5000`n        replication.factor: 1
     consumer:
       properties:
         spring.json.trusted.packages: "*"
@@ -40,3 +40,5 @@ rank:
   ttlFactor: 3  # Each ZSET expires after (windowSec * ttlFactor) seconds
   aggregateMax: 5
   aggregateReadFactor: 3  # Each window reads top (n * factor) entries when aggregating
+
+
