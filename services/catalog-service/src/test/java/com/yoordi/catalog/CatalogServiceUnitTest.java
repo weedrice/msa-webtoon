@@ -22,10 +22,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class CatalogServiceUnitTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
             .withDatabaseName("testdb")
             .withUsername("test")
-            .withPassword("test");
+            .withPassword("test")
+            .withInitScript("schema.sql");
 
     @Autowired
     private CatalogService catalogService;
@@ -38,6 +39,7 @@ class CatalogServiceUnitTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.flyway.enabled", () -> "false");
     }
 
     @Test
