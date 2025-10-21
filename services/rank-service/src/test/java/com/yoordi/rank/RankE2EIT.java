@@ -88,16 +88,25 @@ class RankE2EIT {
             }
         }
 
-        // wait window 2s to close and sink into redis
-        Thread.sleep(2500);
-
+        // wait/poll for window to close and data to be available in redis
         String token = JwksTestUtil.issueToken(keys, "it", "read:rank", 300);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
-        ResponseEntity<String[]> resp = rest.exchange("http://localhost:"+port+"/rank/top?window=2s&n=50&aggregate=1",
-                HttpMethod.GET, new HttpEntity<>(headers), String[].class);
-        Assertions.assertEquals(200, resp.getStatusCodeValue());
-        boolean found = java.util.Arrays.stream(resp.getBody()).anyMatch(s -> s.equals(contentId));
+
+        boolean found = false;
+        long deadline = System.currentTimeMillis() + 10_000; // up to 10s
+        while (System.currentTimeMillis() < deadline) {
+            ResponseEntity<String[]> resp = rest.exchange(
+                    "http://localhost:" + port + "/rank/top?window=2s&n=50&aggregate=1",
+                    HttpMethod.GET, new HttpEntity<>(headers), String[].class);
+            Assertions.assertEquals(200, resp.getStatusCodeValue());
+            String[] body = resp.getBody();
+            if (body != null && java.util.Arrays.stream(body).anyMatch(s -> s.equals(contentId))) {
+                found = true;
+                break;
+            }
+            Thread.sleep(500);
+        }
         Assertions.assertTrue(found, "expected contentId in rank top");
     }
 }

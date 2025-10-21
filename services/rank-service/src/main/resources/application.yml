@@ -11,6 +11,7 @@ spring:
       state-dir: ${TMPDIR:/tmp}/kstreams
       properties:
         spring.json.trusted.packages: "*"
+        consumer.auto.offset.reset: earliest
     consumer:
       properties:
         spring.json.trusted.packages: "*"

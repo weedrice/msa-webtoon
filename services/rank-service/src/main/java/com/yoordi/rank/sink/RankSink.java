@@ -34,7 +34,8 @@ public class RankSink {
             var zset = redissonClient.getScoredSortedSet(zsetKey);
             zset.add(count, contentId);
             // Set TTL to auto-expire old windows
-            int ttlSeconds = Math.max(windowSec * ttlFactor, windowSec);
+            // Provide a safety margin of +1 window to avoid flakiness around window close
+            int ttlSeconds = Math.max(windowSec * (ttlFactor + 1), windowSec * 2);
             zset.expire(Duration.ofSeconds(ttlSeconds));
             
             // Update latest pointer (with TTL a bit longer than ZSET)
