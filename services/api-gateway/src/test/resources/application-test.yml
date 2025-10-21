@@ -1,0 +1,17 @@
+spring:
+  webflux:
+    cors:
+      mappings:
+        "/search/**":
+          allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+          allowed-methods: "GET,OPTIONS"
+          allowed-headers: "*"
+  cloud:
+    gateway:
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: ${CORS_ALLOWED_ORIGINS:*}
+            allowedMethods: "GET,OPTIONS"
+            allowedHeaders: "*"

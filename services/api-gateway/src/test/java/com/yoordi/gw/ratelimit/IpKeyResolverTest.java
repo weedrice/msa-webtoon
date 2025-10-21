@@ -12,7 +12,8 @@ import java.net.InetSocketAddress;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@org.springframework.context.annotation.Import(com.yoordi.gw.security.TestJwtConfig.class)
+@SpringBootTest(properties = {"app.security.enabled=true"})
 class IpKeyResolverTest {
 
     @Autowired

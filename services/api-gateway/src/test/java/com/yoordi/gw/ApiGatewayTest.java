@@ -3,6 +3,7 @@ package com.yoordi.gw;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
@@ -17,8 +18,12 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    properties = {"app.security.enabled=true"},
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT
+)
 @Testcontainers
+@Import(com.yoordi.gw.security.TestJwtConfig.class)
 class ApiGatewayTest {
 
     @Container
@@ -184,3 +189,5 @@ class ApiGatewayTest {
         assertEquals(concurrentRequests, successCount.get());
     }
 }
+ 
+

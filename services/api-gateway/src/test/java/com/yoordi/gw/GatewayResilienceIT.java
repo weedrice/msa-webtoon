@@ -13,7 +13,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.springframework.context.annotation.Import(com.yoordi.gw.security.TestCorsConfig.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"spring.profiles.active=it","app.security.enabled=true"})
 class GatewayResilienceIT {
 
     static WireMockServer backend;
@@ -111,4 +112,5 @@ class GatewayResilienceIT {
                 .expectHeader().valueEquals("Access-Control-Allow-Origin", "http://example.com");
     }
 }
+
 
