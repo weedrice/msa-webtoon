@@ -34,6 +34,17 @@ jib {
         image = 'eclipse-temurin:21-jre'
     }
     to {
-        image = 'registry.local/event-ingest:0.1.0'
+        image = 'msa-webtoon/event-ingest'
+        tags = ['latest', project.version]
     }
+    container {
+        jvmFlags = ['-Xms256m', '-Xmx512m']
+        ports = ['8080']
+        labels = [
+            'maintainer': 'msa-webtoon',
+            'service': 'event-ingest',
+            'version': project.version
+        ]
+    }
+    allowInsecureRegistries = true
 }

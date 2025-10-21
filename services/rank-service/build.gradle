@@ -1,12 +1,27 @@
 plugins {
     id 'org.springframework.boot'
     id 'java'
+    id 'com.google.cloud.tools.jib' version '3.4.0'
 }
 
-bootBuildImage {
-    imageName = "msa-webtoon/rank-service"
-    tags = ["msa-webtoon/rank-service:latest"]
-    builder = "paketobuildpacks/builder-jammy-base:latest"
+jib {
+    from {
+        image = 'eclipse-temurin:17-jre'
+    }
+    to {
+        image = 'msa-webtoon/rank-service'
+        tags = ['latest', project.version]
+    }
+    container {
+        jvmFlags = ['-Xms256m', '-Xmx512m']
+        ports = ['8080']
+        labels = [
+            'maintainer': 'msa-webtoon',
+            'service': 'rank-service',
+            'version': project.version
+        ]
+    }
+    allowInsecureRegistries = true
 }
 
 dependencies {

@@ -28,9 +28,8 @@ if (-not $jh) {
   exit 1
 }
 
-$env:GRADLE_OPTS = ("-Dorg.gradle.java.home={0} {1}" -f $jh, $env:GRADLE_OPTS)
+$env:GRADLE_OPTS = ('-Dorg.gradle.java.home="{0}" {1}' -f $jh, $env:GRADLE_OPTS)
 Write-Host "Using JDK: $jh" -ForegroundColor Cyan
 
 & (Join-Path $PSScriptRoot "..\gradlew.bat") @Args
 exit $LASTEXITCODE
-

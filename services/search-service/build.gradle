@@ -2,15 +2,34 @@ plugins {
     id 'org.springframework.boot' version '3.4.4'
     id 'io.spring.dependency-management' version '1.1.6'
     id 'java'
+    id 'com.google.cloud.tools.jib' version '3.4.0'
 }
 
-bootBuildImage {
-    imageName = "msa-webtoon/search-service"
-    tags = ["msa-webtoon/search-service:latest"]
+jib {
+    from {
+        image = 'eclipse-temurin:21-jre'
+    }
+    to {
+        image = 'msa-webtoon/search-service'
+        tags = ['latest', project.version]
+    }
+    container {
+        jvmFlags = ['-Xms256m', '-Xmx512m']
+        ports = ['8080']
+        labels = [
+            'maintainer': 'msa-webtoon',
+            'service': 'search-service',
+            'version': project.version
+        ]
+    }
+    allowInsecureRegistries = true
 }
 
 java {
     sourceCompatibility = '21'
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 dependencies {
@@ -26,8 +45,8 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:kafka'
     testImplementation 'org.testcontainers:testcontainers'
-    testImplementation 'org.testcontainers:opensearch'
     testImplementation 'com.github.tomakehurst:wiremock-jre8:2.35.0'
+    testImplementation project(':libs:common-test')
     testImplementation 'io.jsonwebtoken:jjwt-api:0.12.5'
     testRuntimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
     testRuntimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'

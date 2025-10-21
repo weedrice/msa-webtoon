@@ -1,11 +1,27 @@
 plugins {
     id 'org.springframework.boot'
     id 'java'
+    id 'com.google.cloud.tools.jib' version '3.4.0'
 }
 
-bootBuildImage {
-    imageName = "msa-webtoon/api-gateway"
-    tags = ["msa-webtoon/api-gateway:latest"]
+jib {
+    from {
+        image = 'eclipse-temurin:17-jre'
+    }
+    to {
+        image = 'msa-webtoon/api-gateway'
+        tags = ['latest', project.version]
+    }
+    container {
+        jvmFlags = ['-Xms256m', '-Xmx512m']
+        ports = ['8080']
+        labels = [
+            'maintainer': 'msa-webtoon',
+            'service': 'api-gateway',
+            'version': project.version
+        ]
+    }
+    allowInsecureRegistries = true
 }
 
 dependencies {
@@ -23,8 +39,9 @@ dependencies {
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
-    testImplementation 'com.github.tomakehurst:wiremock-jre8:2.35.0'
+    testImplementation 'com.github.tomakehurst:wiremock-jre8-standalone:2.35.0'
     testImplementation 'io.jsonwebtoken:jjwt-api:0.12.5'
     testRuntimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
     testRuntimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+    testImplementation 'javax.servlet:javax.servlet-api:3.1.0'
 }
