@@ -51,6 +51,7 @@ public class KafkaProducerConfig {
     }
 
     @Bean
+    @org.springframework.context.annotation.Primary
     public KafkaTemplate<String, EventDto> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
@@ -78,3 +79,5 @@ public class KafkaProducerConfig {
         return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(props));
     }
 }
+
+
