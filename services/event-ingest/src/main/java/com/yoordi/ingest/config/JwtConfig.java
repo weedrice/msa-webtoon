@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import javax.crypto.spec.SecretKeySpec;
 
 @Configuration
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "spring.security.oauth2.resourceserver.jwt.secret")
 public class JwtConfig {
     
     @Value("${spring.security.oauth2.resourceserver.jwt.secret}")
@@ -28,3 +29,6 @@ public class JwtConfig {
             .build();
     }
 }
+
+
+
