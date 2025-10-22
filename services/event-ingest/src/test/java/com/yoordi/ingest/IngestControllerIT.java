@@ -12,10 +12,8 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
+import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.kafka.test.context.EmbeddedKafka;
 
 import java.time.Duration;
 import java.util.List;
@@ -25,11 +23,10 @@ import java.util.Properties;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
+@EmbeddedKafka(topics = {"events.page_view.v1"}, partitions = 1)
 class IngestControllerIT {
 
-    @Container
-    static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.3"));
+    
 
     static WireMockServer wm;
     static com.yoordi.test.JwksTestUtil.Keys keys;
@@ -42,7 +39,8 @@ class IngestControllerIT {
 
     @DynamicPropertySource
     static void props(DynamicPropertyRegistry r) {
-        r.add("KAFKA_BOOTSTRAP", kafka::getBootstrapServers);
+        r.add("KAFKA_BOOTSTRAP", () -> System.getProperty("spring.embedded.kafka.brokers"));
+        r.add("spring.kafka.bootstrap-servers", () -> System.getProperty("spring.embedded.kafka.brokers"));
         r.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", () -> "http://localhost:" + wm.port() + "/.well-known/jwks.json");
     }
 
@@ -67,9 +65,8 @@ class IngestControllerIT {
         ResponseEntity<Void> resp = rest.postForEntity("http://localhost:"+port+"/ingest/events", new HttpEntity<>(body,h), Void.class);
         Assertions.assertEquals(202, resp.getStatusCodeValue());
 
-        // consume one message from topic
         Properties p = new Properties();
-        p.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        p.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, System.getProperty("spring.embedded.kafka.brokers"));
         p.put(ConsumerConfig.GROUP_ID_CONFIG, "it-consumer");
         p.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         try (KafkaConsumer<String,String> c = new KafkaConsumer<>(p, new StringDeserializer(), new StringDeserializer())) {
@@ -79,4 +76,9 @@ class IngestControllerIT {
         }
     }
 }
+
+
+
+
+
 

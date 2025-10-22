@@ -8,6 +8,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(value = "app.security.enabled", havingValue = "true", matchIfMissing = true)
 public class SecurityConfig {
     @Bean
     SecurityFilterChain filter(HttpSecurity http) throws Exception {
@@ -19,3 +20,5 @@ public class SecurityConfig {
             .oauth2ResourceServer(o -> o.jwt(j -> {})).build();
     }
 }
+
+
