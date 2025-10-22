@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "security.permitAll=false")
 @Testcontainers
+@org.springframework.kafka.test.context.EmbeddedKafka(topics = {"catalog.upsert.v1"}, partitions = 1)
 class CatalogSecurityIT {
 
     static WireMockServer wm;
@@ -46,6 +47,8 @@ class CatalogSecurityIT {
         r.add("spring.datasource.username", postgres::getUsername);
         r.add("spring.datasource.password", postgres::getPassword);
         r.add("spring.flyway.enabled", () -> "false");
+        r.add("spring.kafka.bootstrap-servers", () -> System.getProperty("spring.embedded.kafka.brokers"));
+        r.add("KAFKA_BOOTSTRAP", () -> System.getProperty("spring.embedded.kafka.brokers"));
     }
 
     @BeforeAll
