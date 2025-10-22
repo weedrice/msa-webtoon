@@ -1,0 +1,12 @@
+app:
+  security:
+    enabled: false
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+
+jwt:
+  expires-min: 60
+  refresh-expires-min: 1440
+

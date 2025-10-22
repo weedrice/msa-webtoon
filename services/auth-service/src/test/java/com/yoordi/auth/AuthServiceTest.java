@@ -5,7 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import com.yoordi.auth.keys.KeyService;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -17,7 +17,11 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = { "app.security.enabled=false" }
+)
+@org.springframework.test.context.ActiveProfiles("test")
 class AuthServiceTest {
 
     @LocalServerPort
@@ -26,8 +30,8 @@ class AuthServiceTest {
     @Autowired
     private TestRestTemplate restTemplate;
 
-    @Value("${jwt.secret}")
-    private String jwtSecret;
+    @Autowired
+    private KeyService keyService;
 
     @Test
     void testTokenGeneration() {
@@ -60,9 +64,8 @@ class AuthServiceTest {
         assertNotNull(token);
 
         // Verify token claims
-        var key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
         Claims claims = Jwts.parser()
-                .verifyWith(key)
+                .verifyWith(keyService.currentPublicKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
@@ -85,9 +88,8 @@ class AuthServiceTest {
         assertNotNull(token);
 
         // Verify default scope
-        var key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
         Claims claims = Jwts.parser()
-                .verifyWith(key)
+                .verifyWith(keyService.currentPublicKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
@@ -113,9 +115,8 @@ class AuthServiceTest {
         assertTrue(expiresIn > 0);
 
         // Verify token has valid expiration
-        var key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
         Claims claims = Jwts.parser()
-                .verifyWith(key)
+                .verifyWith(keyService.currentPublicKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
@@ -149,3 +150,6 @@ class AuthServiceTest {
         assertEquals("UP", response.getBody().get("status"));
     }
 }
+
+
+

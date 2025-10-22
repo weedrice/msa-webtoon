@@ -11,7 +11,11 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = { "app.security.enabled=false" }
+)
+@org.springframework.test.context.ActiveProfiles("test")
 class AuthApiTest {
 
     @LocalServerPort
@@ -47,4 +51,7 @@ class AuthApiTest {
         assertNotNull(rotate.getBody().get("kid"));
     }
 }
+
+
+
 
