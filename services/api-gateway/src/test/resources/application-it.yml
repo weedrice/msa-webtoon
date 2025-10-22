@@ -1,0 +1,44 @@
+spring:
+  main:
+    web-application-type: reactive
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 500
+        response-timeout: 1s
+      routes:
+        - id: rank
+          uri: ${SERVICE_RANK_URL:http://localhost:8102}
+          predicates:
+            - Path=/rank/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: rankCb
+                fallbackUri: forward:/__fallback/rank
+        - id: search
+          uri: ${SERVICE_SEARCH_URL:http://localhost:8104}
+          predicates:
+            - Path=/search/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: searchCb
+                fallbackUri: forward:/__fallback/search
+
+resilience4j:
+  timelimiter:
+    instances:
+      rankCb:
+        timeoutDuration: 1s
+        cancelRunningFuture: true
+
+spring:
+  cloud:
+    circuitbreaker:
+      timelimiter:
+        enabled: true
+
+app:
+  security:
+    enabled: true
