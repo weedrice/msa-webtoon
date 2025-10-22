@@ -14,7 +14,7 @@ subprojects {
     apply plugin: 'io.spring.dependency-management'
     apply plugin: 'jacoco'
 
-    java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }
+    java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 
     // 🔽 Spring Boot BOM 적용: 하위 모듈에서 버전 없이 선언 가능
     dependencyManagement {

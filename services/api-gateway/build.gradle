@@ -6,7 +6,7 @@ plugins {
 
 jib {
     from {
-        image = 'eclipse-temurin:17-jre'
+        image = 'eclipse-temurin:21-jre'
     }
     to {
         image = 'msa-webtoon/api-gateway'
@@ -44,4 +44,10 @@ dependencies {
     testRuntimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
     testRuntimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
     testImplementation 'javax.servlet:javax.servlet-api:3.1.0'
+}
+
+configurations {
+    implementation {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-web'
+    }
 }

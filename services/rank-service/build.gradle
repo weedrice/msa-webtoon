@@ -6,7 +6,7 @@ plugins {
 
 jib {
     from {
-        image = 'eclipse-temurin:17-jre'
+        image = 'eclipse-temurin:21-jre'
     }
     to {
         image = 'msa-webtoon/rank-service'
@@ -41,6 +41,6 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers'   // ??generic
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:kafka'
-    testImplementation platform('org.testcontainers:testcontainers-bom:1.19.8') // ?덉젙 踰꾩쟾
+    testImplementation platform('org.testcontainers:testcontainers-bom:1.19.8') // 고정 버전
     testImplementation project(':libs:common-test')
 }
