@@ -9,6 +9,7 @@ spring:
       routes:
         - id: rank
           uri: ${SERVICE_RANK_URL:http://localhost:8102}
+          order: -10000
           predicates:
             - Path=/rank/**
           filters:
@@ -18,6 +19,7 @@ spring:
                 fallbackUri: forward:/__fallback/rank
         - id: search
           uri: ${SERVICE_SEARCH_URL:http://localhost:8104}
+          order: -10000
           predicates:
             - Path=/search/**
           filters:
@@ -32,12 +34,25 @@ resilience4j:
       rankCb:
         timeoutDuration: 1s
         cancelRunningFuture: true
-
-spring:
-  cloud:
+    configs:
+      default:
+        timeoutDuration: 1s
+  circuitbreaker:
+    instances:
+      rankCb:
+        recordExceptions:
+          - java.util.concurrent.TimeoutException
+          - java.net.SocketTimeoutException
+          - io.netty.handler.timeout.ReadTimeoutException
+          - io.netty.channel.ConnectTimeoutException
+          - reactor.netty.http.client.PrematureCloseException
     circuitbreaker:
       timelimiter:
         enabled: true
+      resilience4j:
+        enabled: true
+        timeLimiter:
+          enabled: true
 
 app:
   security:
