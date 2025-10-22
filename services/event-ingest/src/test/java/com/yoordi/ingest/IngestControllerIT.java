@@ -41,6 +41,7 @@ class IngestControllerIT {
     static void props(DynamicPropertyRegistry r) {
         r.add("KAFKA_BOOTSTRAP", () -> System.getProperty("spring.embedded.kafka.brokers"));
         r.add("spring.kafka.bootstrap-servers", () -> System.getProperty("spring.embedded.kafka.brokers"));
+        r.add("topic.pageView", () -> "events.page_view.v1");
         r.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", () -> "http://localhost:" + wm.port() + "/.well-known/jwks.json");
     }
 
@@ -76,6 +77,7 @@ class IngestControllerIT {
         }
     }
 }
+
 
 
 
