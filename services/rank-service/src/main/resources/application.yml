@@ -12,7 +12,12 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
         consumer.auto.offset.reset: earliest
-        default.deserialization.exception.handler: org.apache.kafka.streams.errors.LogAndContinueExceptionHandler`n        retries: 10`n        request.timeout.ms: 60000`n        reconnect.backoff.ms: 200`n        reconnect.backoff.max.ms: 5000`n        replication.factor: 1
+        default.deserialization.exception.handler: org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
+        retries: 10
+        request.timeout.ms: 60000
+        reconnect.backoff.ms: 200
+        reconnect.backoff.max.ms: 5000
+        replication.factor: 1
     consumer:
       properties:
         spring.json.trusted.packages: "*"
