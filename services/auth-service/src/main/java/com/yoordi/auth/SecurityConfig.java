@@ -8,13 +8,15 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(value = "app.security.enabled", havingValue = "true", matchIfMissing = true)
 public class SecurityConfig {
     @Bean
     SecurityFilterChain filter(HttpSecurity http) throws Exception {
         return http.csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/token", "/actuator/**").permitAll()
+                .requestMatchers("/token", "/actuator/**", "/.well-known/jwks.json", "/keys/rotate").permitAll()
                 .anyRequest().authenticated())
             .httpBasic(b -> {}).build();
     }
 }
+
