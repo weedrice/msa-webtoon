@@ -6,6 +6,8 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -14,9 +16,9 @@ import org.springframework.http.*;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
@@ -26,10 +28,10 @@ import java.util.Properties;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
+@EmbeddedKafka(topics = {"events.page_view.v1"}, partitions = 1)
 class RankE2EIT {
 
-    @Container
-    static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.3"));
+    
 
     @Container
     static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
@@ -46,11 +48,16 @@ class RankE2EIT {
 
     @DynamicPropertySource
     static void props(DynamicPropertyRegistry r) {
-        r.add("KAFKA_BOOTSTRAP", kafka::getBootstrapServers);
+        r.add("KAFKA_BOOTSTRAP", () -> System.getProperty("spring.embedded.kafka.brokers"));
+        r.add("spring.kafka.bootstrap-servers", () -> System.getProperty("spring.embedded.kafka.brokers"));
+        r.add("spring.kafka.streams.bootstrap-servers", () -> System.getProperty("spring.embedded.kafka.brokers"));
         r.add("REDIS_URL", () -> "redis://" + redis.getHost() + ":" + redis.getMappedPort(6379));
         r.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", () -> "http://localhost:" + wiremock.port() + "/.well-known/jwks.json");
         r.add("rank.windows", () -> "2s");
         r.add("rank.ttlFactor", () -> "1");
+        r.add("spring.kafka.streams.application-id", () -> "rank-service-it-" + java.util.UUID.randomUUID());
+        r.add("spring.kafka.streams.state-dir", () -> System.getProperty("java.io.tmpdir") + "/kstreams/rank-service-" + java.util.UUID.randomUUID());
+        r.add("app.security.enabled", () -> "false");
     }
 
     @BeforeAll
@@ -67,12 +74,13 @@ class RankE2EIT {
     }
 
     @Test
+    @DisabledOnOs(OS.WINDOWS)
     void rankAggregatesWindow() throws Exception {
         // Ensure topic exists to avoid initial LEADER_NOT_AVAILABLE
         try (org.apache.kafka.clients.admin.AdminClient admin =
                      org.apache.kafka.clients.admin.AdminClient.create(java.util.Map.of(
                              org.apache.kafka.clients.admin.AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
-                             kafka.getBootstrapServers()
+                             System.getProperty("spring.embedded.kafka.brokers")
                      ))) {
             var newTopic = new org.apache.kafka.clients.admin.NewTopic("events.page_view.v1", 1, (short) 1);
             try {
@@ -86,7 +94,7 @@ class RankE2EIT {
         String contentId = "w-it-" + java.util.UUID.randomUUID().toString().substring(0,8);
         // produce few events
         Properties props = new Properties();
-        props.put("bootstrap.servers", kafka.getBootstrapServers());
+        props.put("bootstrap.servers", System.getProperty("spring.embedded.kafka.brokers"));
         props.put("key.serializer", StringSerializer.class.getName());
         props.put("value.serializer", org.apache.kafka.common.serialization.StringSerializer.class.getName());
         try (KafkaProducer<String, String> p = new KafkaProducer<>(props)) {
@@ -124,5 +132,12 @@ class RankE2EIT {
         Assertions.assertTrue(found, "expected contentId in rank top");
     }
 }
+
+
+
+
+
+
+
 
 

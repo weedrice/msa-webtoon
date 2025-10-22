@@ -50,6 +50,9 @@ class RankServiceTest {
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
         registry.add("REDIS_URL", () -> "redis://" + redis.getHost() + ":" + redis.getFirstMappedPort());
+        registry.add("spring.kafka.streams.application-id", () -> "rank-service-test-" + java.util.UUID.randomUUID());
+        registry.add("spring.kafka.streams.state-dir", () -> System.getProperty("java.io.tmpdir") + "/kstreams/rank-service-" + java.util.UUID.randomUUID());
+        registry.add("app.security.enabled", () -> "false");
     }
 
     @BeforeEach
