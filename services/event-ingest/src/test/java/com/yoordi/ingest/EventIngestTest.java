@@ -27,7 +27,13 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"app.security.enabled=false"})
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {
+                "app.security.enabled=false"
+        }
+)
+@org.springframework.test.context.ActiveProfiles("test")
 @EmbeddedKafka(topics = {"events.page_view.v1"}, partitions = 1)
 class EventIngestTest {
 
@@ -49,6 +55,9 @@ class EventIngestTest {
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.kafka.bootstrap-servers", () -> System.getProperty("spring.embedded.kafka.brokers"));
         registry.add("topic.pageView", () -> "events.page_view.v1");
+        registry.add("topic.pageView.dlq", () -> "events.page_view.v1.dlq");
+        registry.add("ingest.backpressure.max-concurrent", () -> "1000");
+        registry.add("spring.main.allow-bean-definition-overriding", () -> "true");
     }
 
     @BeforeEach
@@ -195,4 +204,3 @@ class EventIngestTest {
         return null;
     }
 }
-

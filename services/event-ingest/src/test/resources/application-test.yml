@@ -1,0 +1,20 @@
+app:
+  security:
+    enabled: false
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  kafka:
+    # Let tests use the embedded Kafka broker
+    bootstrap-servers: ${spring.embedded.kafka.brokers}
+
+# Event ingest tuning for tests
+ingest:
+  backpressure:
+    max-concurrent: 1000
+
+# Topics used in tests
+"topic.pageView": events.page_view.v1
+"topic.pageView.dlq": events.page_view.v1.dlq
+

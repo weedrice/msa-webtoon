@@ -36,10 +36,11 @@ dependencies {
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.apache.kafka:kafka-streams-test-utils'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
 
-    testImplementation 'org.testcontainers:testcontainers'   // ← generic
+    testImplementation 'org.testcontainers:testcontainers'   // ??generic
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:kafka'
-    testImplementation platform('org.testcontainers:testcontainers-bom:1.19.8') // 안정 버전
+    testImplementation platform('org.testcontainers:testcontainers-bom:1.19.8') // ?덉젙 踰꾩쟾
     testImplementation project(':libs:common-test')
 }

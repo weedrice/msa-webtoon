@@ -13,7 +13,6 @@ import org.springframework.http.*;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.kafka.test.context.EmbeddedKafka;
-import org.springframework.kafka.test.context.EmbeddedKafka;
 
 import java.time.Duration;
 import java.util.List;
@@ -23,6 +22,7 @@ import java.util.Properties;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.springframework.test.context.ActiveProfiles("test")
 @EmbeddedKafka(topics = {"events.page_view.v1"}, partitions = 1)
 class IngestControllerIT {
 
